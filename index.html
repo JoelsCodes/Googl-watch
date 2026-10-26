@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GOOGL Watch</title>
+<meta name="description" content="Live Alphabet (GOOGL) price, one-year chart and trend forecast.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GOOGL Watch">
+<meta name="theme-color" content="#0e1320" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f3f5f9" media="(prefers-color-scheme: light)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one phone-width column; quote header, chart card, outlook, year stats, settings. Wider screens get a two-column lower half. */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --line:#dfe4ee; --fg:#141a2a; --muted:#5d6782;
+  --accent:#2f5fd0; --accent-soft:#2f5fd01f;
+  --up:#13895a; --down:#c8372d; --warn:#a86a00;
+  --band:#2f5fd024;
+  --f-display:"Sora",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1320; --surface:#161d2e; --line:#26304a; --fg:#e8ecf6; --muted:#8f9ab5;
+  --accent:#7ea2ff; --accent-soft:#7ea2ff22; --up:#3fcf8e; --down:#ff6b60; --warn:#f0b54a; --band:#7ea2ff2a;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1320; --surface:#161d2e; --line:#26304a; --fg:#e8ecf6; --muted:#8f9ab5;
+  --accent:#7ea2ff; --accent-soft:#7ea2ff22; --up:#3fcf8e; --down:#ff6b60; --warn:#f0b54a; --band:#7ea2ff2a;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);-webkit-text-size-adjust:100%;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px;display:grid;gap:14px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+h1,h2{font-family:var(--f-display);margin:0;text-wrap:balance}
+h2{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* quote header */
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.tick{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.tick h1{font-size:22px;font-weight:700;letter-spacing:.02em}
+.tick span{color:var(--muted);font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.pill.open i{background:var(--up);box-shadow:0 0 0 0 var(--up);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--up) 60%,transparent)}100%{box-shadow:0 0 0 7px transparent}}
+@media (prefers-reduced-motion:reduce){.pill.open i{animation:none}}
+.price{font-family:var(--f-num);font-size:44px;font-weight:600;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.price.flash-up{color:var(--up)} .price.flash-down{color:var(--down)}
+.price{transition:color .6s}
+.chg{font-family:var(--f-num);font-size:15px;font-weight:500}
+.up{color:var(--up)} .down{color:var(--down)}
+.meta{color:var(--muted);font-size:12.5px}
+.banner{font-size:13px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--line)}
+.banner.err{background:color-mix(in srgb,var(--down) 12%,transparent)}
+.banner button{background:none;border:0;padding:0;color:var(--accent);font-weight:600;text-decoration:underline;cursor:pointer}
+
+/* chart */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.readout{font-size:13px;color:var(--muted);min-height:20px}
+.readout b{color:var(--fg);font-weight:600}
+.seg{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:2px}
+.seg button{border:0;background:none;padding:6px 10px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;font-family:var(--f-num)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px #0002}
+.cv{position:relative;width:100%;height:260px;touch-action:pan-y}
+.cv canvas{width:100%;height:100%;display:block}
+.chart-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px;flex-wrap:wrap}
+.tog{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
+.tog input{accent-color:var(--accent);width:16px;height:16px}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle;background:var(--c)}
+
+/* lower grid */
+.grid{display:grid;gap:14px}
+@media (min-width:760px){.grid{grid-template-columns:1.15fr 1fr}}
+.verdict{display:flex;align-items:center;gap:12px;margin:10px 0 6px;flex-wrap:wrap}
+.vbadge{font-family:var(--f-display);font-weight:700;font-size:20px;padding:6px 14px;border-radius:10px}
+.vbadge.bull{background:color-mix(in srgb,var(--up) 16%,transparent);color:var(--up)}
+.vbadge.bear{background:color-mix(in srgb,var(--down) 16%,transparent);color:var(--down)}
+.vbadge.flat{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.score{font-size:13px;color:var(--muted)}
+.proj{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.proj div{background:var(--bg);border-radius:10px;padding:10px;min-width:0}
+.proj small,.stats small{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.proj b{font-family:var(--f-num);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.sig{list-style:none;margin:0;padding:0;display:grid}
+.sig li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-top:1px solid var(--line)}
+.sig li .n{font-weight:600;font-size:14px}
+.sig li .d{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+.chip{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.03em;align-self:center}
+.chip.bull{background:color-mix(in srgb,var(--up) 16%,transparent);color:var(--up)}
+.chip.bear{background:color-mix(in srgb,var(--down) 16%,transparent);color:var(--down)}
+.chip.flat{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;margin-top:10px}
+.stats b{font-family:var(--f-num);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.stats .x{font-size:12px;color:var(--muted)}
+.note{font-size:12.5px;color:var(--muted);margin:10px 0 0}
+
+/* settings */
+details.card summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary::after{content:"+";font-family:var(--f-num);color:var(--muted);font-size:18px}
+details.card[open] summary::after{content:"–"}
+.form{display:grid;gap:10px;margin-top:12px}
+.form label{font-size:13px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row input{flex:1 1 200px;min-width:0;font:15px var(--f-num);padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.btn{border:0;border-radius:10px;padding:10px 16px;font-weight:600;background:var(--accent);color:var(--surface);cursor:pointer}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--fg)}
+.form p{margin:0;font-size:13px;color:var(--muted)}
+.form a{color:var(--accent)}
+footer{font-size:12px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <div>
+        <div class="tick"><h1>GOOGL</h1><span>Alphabet Inc. Class A · Nasdaq</span></div>
+      </div>
+      <span class="pill" id="mkt"><i></i><span>Loading</span></span>
+    </div>
+    <div class="price" id="price">—</div>
+    <div class="chg" id="chg">&nbsp;</div>
+    <div class="meta" id="updated">&nbsp;</div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="card" aria-label="Price chart">
+    <div class="chart-head">
+      <div class="readout" id="readout">&nbsp;</div>
+      <div class="seg" role="group" aria-label="Chart range" id="ranges">
+        <button data-r="1D">1D</button><button data-r="1M">1M</button><button data-r="3M">3M</button><button data-r="6M">6M</button><button data-r="1Y" aria-pressed="true">1Y</button>
+      </div>
+    </div>
+    <div class="cv" id="cv"><canvas id="chart" aria-label="GOOGL price chart" role="img"></canvas></div>
+    <div class="chart-foot">
+      <label class="tog"><input type="checkbox" id="showFc" checked> Show 30-day forecast</label>
+      <div class="legend"><span style="--c:var(--accent)">Price</span><span style="--c:var(--muted)">50-day avg</span><span style="--c:var(--warn)">Forecast</span></div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-label="Trend outlook">
+      <h2>Trend outlook · next 30 days</h2>
+      <div class="verdict"><span class="vbadge flat" id="vbadge">—</span><span class="score" id="vscore"></span></div>
+      <div class="proj">
+        <div><small>Median target</small><b id="pMid">—</b></div>
+        <div><small>Likely range</small><b id="pRange">—</b></div>
+        <div><small>Chance higher</small><b id="pUp">—</b></div>
+      </div>
+      <ul class="sig" id="signals"></ul>
+      <p class="note" id="backtest"></p>
+    </section>
+
+    <section class="card" aria-label="Last 365 days">
+      <h2>Last 365 days</h2>
+      <div class="stats" id="stats"></div>
+      <p class="note">Based on daily closes. Volatility is annualized from daily moves.</p>
+    </section>
+  </div>
+
+  <details class="card" id="settings">
+    <summary>Data source</summary>
+    <div class="form">
+      <p>Prices come from <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener">Twelve Data</a>. The free plan (800 requests a day) is enough. Sign up, copy your API key, and paste it here. It is saved only on this device.</p>
+      <label for="key">API key</label>
+      <div class="row"><input id="key" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste your Twelve Data key"><button class="btn" id="saveKey">Save and load</button></div>
+      <div class="row"><button class="btn ghost" id="useDemo">Use sample data</button><button class="btn ghost" id="refresh">Refresh now</button></div>
+      <p id="usage"></p>
+    </div>
+  </details>
+
+  <footer>The forecast is a statistical estimate from past prices (trend, momentum and volatility). It cannot see news, earnings or the wider market, and it is often wrong. This is not financial advice.</footer>
+</div>
+
+<script>
+"use strict";
+const SYM = "GOOGL", API = "https://api.twelvedata.com", H = 21; // ~30 calendar days = 21 trading days
+const $ = id => document.getElementById(id);
+const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
+
+const st = { key: store.get("gw_key") || "", demo: false, daily: [], intraday: [], quote: null, range: store.get("gw_range") || "1Y", fc: null, model: null, lastPrice: null, timers: [] };
+
+/* ---------- formatting ---------- */
+const usd = v => v == null || isNaN(v) ? "—" : "$" + v.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+const pct = (v, s=true) => v == null || isNaN(v) ? "—" : (s && v > 0 ? "+" : "") + (v*100).toFixed(2) + "%";
+const sgn = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
+const dfmt = (d, o) => d.toLocaleDateString("en-US", o || {month:"short", day:"numeric", year:"numeric"});
+const tfmt = d => d.toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit"});
+
+/* ---------- data ---------- */
+async function td(path, params) {
+  const u = new URL(API + path);
+  Object.entries({symbol: SYM, apikey: st.key, ...params}).forEach(([k,v]) => u.searchParams.set(k, v));
+  const r = await fetch(u);
+  const j = await r.json().catch(() => ({status:"error", message:"Unreadable reply from Twelve Data"}));
+  if (j.status === "error" || j.code >= 400) {
+    const e = new Error(j.message || "Request failed"); e.code = j.code; throw e;
+  }
+  return j;
+}
+const parseSeries = j => (j.values || []).map(v => ({t: new Date(v.datetime.replace(" ", "T")), o:+v.open, h:+v.high, l:+v.low, c:+v.close, v:+v.volume})).reverse();
+
+async function loadDaily() {
+  // 500 trading days: 365 calendar days to show, plus history so the 200-day average and backtest are valid on day one
+  st.daily = parseSeries(await td("/time_series", {interval:"1day", outputsize:500}));
+}
+async function loadIntraday() {
+  const all = parseSeries(await td("/time_series", {interval:"5min", outputsize:160}));
+  const last = all.length ? all[all.length-1].t.toDateString() : "";
+  st.intraday = all.filter(p => p.t.toDateString() === last);
+}
+async function loadQuote() {
+  const q = await td("/quote", {});
+  st.quote = {
+    price: +q.close, prev: +q.previous_close, change: +q.change, pctc: +q.percent_change / 100,
+    open: !!q.is_market_open, time: new Date((+q.last_quote_at || +q.timestamp) * 1000),
+    hi52: q.fifty_two_week ? +q.fifty_two_week.high : null, lo52: q.fifty_two_week ? +q.fifty_two_week.low : null,
+  };
+  // keep today's daily bar in step with the live quote
+  const d = st.daily, last = d[d.length-1];
+  if (last && st.quote.price) {
+    if (last.t.toDateString() === st.quote.time.toDateString()) last.c = st.quote.price;
+  }
+}
+
+/* sample data: seeded random walk, clearly labeled in the UI */
+function makeDemo() {
+  let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const gauss = () => Math.sqrt(-2*Math.log(rnd()+1e-12)) * Math.cos(2*Math.PI*rnd());
+  const out = []; let p = 150; const d = new Date(); d.setHours(16,0,0,0);
+  const days = []; for (let i = 0; days.length < 500; i++) { const x = new Date(d); x.setDate(d.getDate()-i); if (x.getDay()%6) days.push(x); }
+  days.reverse().forEach((t, i) => { p *= Math.exp(0.0009 + 0.018*gauss() + (i>380 ? 0.0012 : 0)); out.push({t, o:p, h:p*1.01, l:p*0.99, c:p, v:2.5e7}); });
+  st.daily = out;
+  const last = out[out.length-1].c, intr = []; let q = out[out.length-2].c;
+  const open = new Date(d); open.setHours(9,30,0,0);
+  for (let i = 0; i < 78; i++) { q += (last - q) / (78 - i) + q*0.0015*gauss(); intr.push({t: new Date(+open + i*300000), c:q}); }
+  intr[intr.length-1].c = last; st.intraday = intr;
+  const prev = out[out.length-2].c;
+  st.quote = {price:last, prev, change:last-prev, pctc:(last-prev)/prev, open:false, time:new Date(), hi52:null, lo52:null};
+}
+
+/* ---------- maths ---------- */
+const mean = a => a.reduce((s,x) => s+x, 0) / a.length;
+const sd = a => { const m = mean(a); return Math.sqrt(a.reduce((s,x) => s+(x-m)**2, 0) / (a.length-1)); };
+const sma = (c, n) => c.map((_, i) => i < n-1 ? null : mean(c.slice(i-n+1, i+1)));
+function ema(c, n) { const k = 2/(n+1), o = []; c.forEach((x,i) => o.push(i ? x*k + o[i-1]*(1-k) : x)); return o; }
+function rsi(c, n=14) {
+  const o = Array(c.length).fill(null); let g = 0, l = 0;
+  for (let i = 1; i < c.length; i++) {
+    const d = c[i]-c[i-1], up = Math.max(d,0), dn = Math.max(-d,0);
+    if (i <= n) { g += up/n; l += dn/n; if (i === n) o[i] = 100 - 100/(1 + g/(l||1e-9)); }
+    else { g = (g*(n-1)+up)/n; l = (l*(n-1)+dn)/n; o[i] = 100 - 100/(1 + g/(l||1e-9)); }
+  }
+  return o;
+}
+function slope(y) { // least-squares slope of y against 0..n-1
+  const n = y.length, xm = (n-1)/2, ym = mean(y); let a = 0, b = 0;
+  y.forEach((v,i) => { a += (i-xm)*(v-ym); b += (i-xm)**2; }); return a/b;
+}
+const Phi = z => { const t = 1/(1+0.2316419*Math.abs(z)), d = 0.3989423*Math.exp(-z*z/2);
+  const p = d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274)))); return z > 0 ? 1-p : p; };
+
+/* Signal set at index i (uses only data up to i). Each vote is +1 bullish, -1 bearish, 0 neutral. */
+function signalsAt(ind, i) {
+  const {c, s50, s200, macdH, r14, lc} = ind, out = [];
+  out.push({n:"Price vs 50-day average", v: c[i] > s50[i] ? 1 : -1,
+    d: `${usd(c[i])} is ${pct(c[i]/s50[i]-1, false).replace("-","")} ${c[i] > s50[i] ? "above" : "below"} the 50-day average of ${usd(s50[i])}.`});
+  if (s200[i] != null) out.push({n:"50-day vs 200-day average", v: s50[i] > s200[i] ? 1 : -1,
+    d: s50[i] > s200[i] ? "The short-term average is above the long-term one (an uptrend structure)." : "The short-term average is below the long-term one (a downtrend structure)."});
+  const m = macdH[i], mp = macdH[i-3];
+  out.push({n:"MACD momentum", v: m > 0 ? 1 : -1,
+    d: `Momentum is ${m > 0 ? "positive" : "negative"} and ${Math.abs(m) > Math.abs(mp) ? "strengthening" : "fading"} over the last few sessions.`});
+  const r = r14[i];
+  out.push({n:"RSI (14-day)", v: r < 30 ? 1 : r > 70 ? -1 : 0,
+    d: r > 70 ? `RSI ${r.toFixed(0)}: overbought, so a pullback is more likely than usual.` : r < 30 ? `RSI ${r.toFixed(0)}: oversold, so a bounce is more likely than usual.` : `RSI ${r.toFixed(0)}: neither overbought nor oversold.`});
+  const sl = slope(lc.slice(i-59, i+1)) * 252;
+  out.push({n:"60-day trend line", v: sl > 0.05 ? 1 : sl < -0.05 ? -1 : 0,
+    d: `The best-fit line through the last 60 closes points to ${pct(Math.exp(sl)-1)} a year at its current pace.`});
+  return out;
+}
+function indicators(c) {
+  const e12 = ema(c,12), e26 = ema(c,26), macd = c.map((_,i) => e12[i]-e26[i]), sig = ema(macd, 9);
+  return {c, s50: sma(c,50), s200: sma(c,200), macdH: macd.map((m,i) => m - sig[i]), r14: rsi(c), lc: c.map(Math.log)};
+}
+
+function buildModel() {
+  const d = st.daily; if (d.length < 80) return null;
+  const c = d.map(p => p.c), ind = indicators(c), n = c.length, i = n-1;
+  const sigs = signalsAt(ind, i), score = sigs.reduce((s,x) => s+x.v, 0);
+  const lr = c.slice(1).map((x,k) => Math.log(x/c[k]));
+  const vol = sd(lr.slice(-60));                      // daily volatility, recent regime
+  const longDrift = mean(lr.slice(-252));             // a year of average daily log return
+  const trend = slope(ind.lc.slice(-60));             // recent trend, per day
+  // blend: long-run drift, shrunk recent trend, and a small tilt from the signal score
+  const mu = 0.5*longDrift + 0.25*trend + score*0.00025;
+  const last = c[i], t0 = d[i].t;
+  const fc = {t:[t0], mid:[last], lo:[last], hi:[last]};
+  let day = new Date(t0);
+  for (let k = 1; k <= H; k++) {
+    do { day = new Date(day); day.setDate(day.getDate()+1); } while (day.getDay() % 6 === 0);
+    const m = Math.log(last) + mu*k, s = vol*Math.sqrt(k);
+    fc.t.push(day); fc.mid.push(Math.exp(m)); fc.lo.push(Math.exp(m - 1.2816*s)); fc.hi.push(Math.exp(m + 1.2816*s));
+  }
+  const pUp = Phi(mu*H / (vol*Math.sqrt(H)));
+  // backtest: how often did the score's sign call the 21-day move correctly over the last year?
+  let hit = 0, tot = 0;
+  for (let j = Math.max(200, n-252-H); j < n-H; j++) {
+    const sc = signalsAt(ind, j).reduce((s,x) => s+x.v, 0); if (!sc) continue;
+    tot++; if (Math.sign(sc) === Math.sign(c[j+H]-c[j])) hit++;
+  }
+  let base = 0, bt = 0; for (let j = Math.max(200, n-252-H); j < n-H; j++) { bt++; if (c[j+H] > c[j]) base++; }
+  st.fc = fc;
+  return {sigs, score, max: sigs.length, mu, vol, pUp, mid: fc.mid[H], lo: fc.lo[H], hi: fc.hi[H], hit, tot, base: bt ? base/bt : null, s50: ind.s50};
+}
+
+function yearStats() {
+  const d = st.daily, cut = new Date(d[d.length-1].t); cut.setDate(cut.getDate()-365);
+  const y = d.filter(p => p.t >= cut); if (y.length < 2) return null;
+  const c = y.map(p => p.c), lr = c.slice(1).map((x,k) => ({r:x/c[k]-1, t:y[k+1].t}));
+  let peak = c[0], mdd = 0; c.forEach(x => { peak = Math.max(peak, x); mdd = Math.min(mdd, x/peak-1); });
+  const hiI = c.indexOf(Math.max(...c)), loI = c.indexOf(Math.min(...c));
+  const best = lr.reduce((a,b) => b.r > a.r ? b : a), worst = lr.reduce((a,b) => b.r < a.r ? b : a);
+  const ups = lr.filter(x => x.r > 0).length;
+  return {ret: c[c.length-1]/c[0]-1, start: y[0], hi: y[hiI], lo: y[loI], mdd, vol: sd(lr.map(x => x.r))*Math.sqrt(252), best, worst, ups, days: lr.length, n: y.length};
+}
+
+/* ---------- chart ---------- */
+const cv = $("chart");
+let geom = null, hover = null;
+function css(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function seriesForRange() {
+  if (st.range === "1D") return st.intraday.map(p => ({t:p.t, v:p.c}));
+  const days = {"1M":31, "3M":92, "6M":183, "1Y":365}[st.range], d = st.daily;
+  if (!d.length) return [];
+  const cut = new Date(d[d.length-1].t); cut.setDate(cut.getDate()-days);
+  return d.filter(p => p.t >= cut).map(p => ({t:p.t, v:p.c, i:d.indexOf(p)}));
+}
+function draw() {
+  const box = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(box.width*dpr); cv.height = Math.round(box.height*dpr);
+  const g = cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,box.width,box.height);
+  const pts = seriesForRange(); if (pts.length < 2) { geom = null; return; }
+  const showFc = $("showFc").checked && st.range !== "1D" && st.fc;
+  const fc = showFc ? st.fc : null;
+  const W = box.width, Hh = box.height, padR = 56, padB = 22, padT = 8, x0 = 2;
+  // x axis is by trading-day index so weekends do not leave gaps; forecast extends to the right
+  const nPts = pts.length;
+  const totalX = nPts - 1 + (fc ? (st.range === "1Y" ? H : Math.min(H, Math.round(nPts*0.6))) : 0);
+  const fcLen = fc ? totalX - (nPts-1) : 0;
+  let vals = pts.map(p => p.v);
+  if (fc) vals = vals.concat(fc.lo.slice(0, fcLen+1), fc.hi.slice(0, fcLen+1));
+  const s50 = st.range !== "1D" && st.model ? pts.map(p => st.model.s50[p.i]).filter(v => v != null) : [];
+  vals = vals.concat(s50);
+  let lo = Math.min(...vals), hi = Math.max(...vals); const padV = (hi-lo)*0.08 || 1; lo -= padV; hi += padV;
+  const X = k => x0 + (W - padR - x0) * k / totalX, Y = v => padT + (Hh - padT - padB) * (1 - (v-lo)/(hi-lo));
+  // grid + y labels
+  const step = niceStep((hi-lo)/4);
+  g.font = `11px ${css("--f-num")}`; g.textBaseline = "middle"; g.fillStyle = css("--muted"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+  for (let v = Math.ceil(lo/step)*step; v <= hi; v += step) {
+    const y = Math.round(Y(v)) + .5; g.beginPath(); g.moveTo(x0, y); g.lineTo(W-padR+4, y); g.stroke();
+    g.fillText("$" + v.toFixed(step < 1 ? 2 : 0), W-padR+8, y);
+  }
+  // x labels
+  g.textBaseline = "alphabetic"; g.textAlign = "center";
+  const nLab = W < 420 ? 3 : 5;
+  for (let k = 0; k < nLab; k++) {
+    const idx = Math.round((nPts-1) * (k+0.5) / nLab), t = pts[idx].t;
+    const lab = st.range === "1D" ? tfmt(t) : st.range === "1Y" ? dfmt(t, {month:"short", year:"2-digit"}) : dfmt(t, {month:"short", day:"numeric"});
+    g.fillText(lab, X(idx), Hh-5);
+  }
+  g.textAlign = "start";
+  // previous close line on 1D
+  if (st.range === "1D" && st.quote && st.quote.prev) {
+    const y = Y(st.quote.prev); g.setLineDash([3,4]); g.strokeStyle = css("--muted"); g.beginPath(); g.moveTo(x0, y); g.lineTo(W-padR, y); g.stroke(); g.setLineDash([]);
+  }
+  // 50-day avg
+  if (s50.length) {
+    g.strokeStyle = css("--muted"); g.lineWidth = 1.2; g.globalAlpha = .7; g.beginPath(); let started = false;
+    pts.forEach((p,k) => { const v = st.model.s50[p.i]; if (v == null) return; started ? g.lineTo(X(k), Y(v)) : (g.moveTo(X(k), Y(v)), started = true); });
+    g.stroke(); g.globalAlpha = 1;
+  }
+  // area + price line
+  const up = pts[nPts-1].v >= (st.range === "1D" && st.quote ? st.quote.prev : pts[0].v);
+  const lineC = css("--accent");
+  const grad = g.createLinearGradient(0, padT, 0, Hh-padB); grad.addColorStop(0, css("--accent-soft")); grad.addColorStop(1, "rgba(0,0,0,0)");
+  g.beginPath(); pts.forEach((p,k) => k ? g.lineTo(X(k), Y(p.v)) : g.moveTo(X(k), Y(p.v)));
+  g.lineTo(X(nPts-1), Hh-padB); g.lineTo(X(0), Hh-padB); g.closePath(); g.fillStyle = grad; g.fill();
+  g.beginPath(); pts.forEach((p,k) => k ? g.lineTo(X(k), Y(p.v)) : g.moveTo(X(k), Y(p.v)));
+  g.strokeStyle = lineC; g.lineWidth = 2; g.lineJoin = "round"; g.stroke();
+  // forecast band
+  if (fc) {
+    const o = nPts-1;
+    g.beginPath(); for (let k = 0; k <= fcLen; k++) g.lineTo(X(o+k), Y(fc.hi[k])); for (let k = fcLen; k >= 0; k--) g.lineTo(X(o+k), Y(fc.lo[k]));
+    g.closePath(); g.fillStyle = css("--band"); g.fill();
+    g.beginPath(); for (let k = 0; k <= fcLen; k++) g.lineTo(X(o+k), Y(fc.mid[k]));
+    g.setLineDash([5,4]); g.strokeStyle = css("--warn"); g.lineWidth = 1.8; g.stroke(); g.setLineDash([]);
+    if (fcLen < H) { g.fillStyle = css("--muted"); g.font = `10.5px ${css("--f-body")}`; g.textAlign = "right"; g.fillText(`${fcLen} of ${H} days shown`, W-padR-4, padT+10); g.textAlign = "start"; }
+  }
+  // last point
+  const lx = X(nPts-1), ly = Y(pts[nPts-1].v);
+  g.beginPath(); g.arc(lx, ly, 4, 0, 7); g.fillStyle = lineC; g.fill(); g.lineWidth = 2; g.strokeStyle = css("--surface"); g.stroke();
+  geom = {pts, X, Y, nPts, totalX, fc, fcLen, W, Hh, padT, padB, padR};
+  if (hover != null) drawHover(g);
+}
+function drawHover(g) {
+  const {pts, X, Y, nPts, fc, fcLen, Hh, padT, padB} = geom;
+  let k = Math.max(0, Math.min(hover, nPts-1 + (fc ? fcLen : 0)));
+  const isFc = k > nPts-1, t = isFc ? fc.t[k-(nPts-1)] : pts[k].t, v = isFc ? fc.mid[k-(nPts-1)] : pts[k].v;
+  const x = X(k); g.strokeStyle = css("--muted"); g.lineWidth = 1; g.setLineDash([2,3]); g.beginPath(); g.moveTo(x, padT); g.lineTo(x, Hh-padB); g.stroke(); g.setLineDash([]);
+  g.beginPath(); g.arc(x, Y(v), 4.5, 0, 7); g.fillStyle = isFc ? css("--warn") : css("--accent"); g.fill();
+  const when = st.range === "1D" ? tfmt(t) : dfmt(t, {weekday:"short", month:"short", day:"numeric", year:"numeric"});
+  $("readout").innerHTML = isFc
+    ? `<b class="num">${usd(v)}</b> forecast · ${when} · range ${usd(fc.lo[k-(nPts-1)])}–${usd(fc.hi[k-(nPts-1)])}`
+    : `<b class="num">${usd(v)}</b> · ${when}`;
+}
+function niceStep(r) { const p = 10**Math.floor(Math.log10(r)), m = r/p; return (m < 1.5 ? 1 : m < 3 ? 2 : m < 7 ? 5 : 10) * p; }
+function pointer(e) {
+  if (!geom) return; const b = cv.getBoundingClientRect(), x = e.clientX - b.left;
+  const {X, totalX} = geom; const k = Math.round((x - X(0)) / (X(totalX) - X(0)) * totalX);
+  hover = k; draw();
+}
+cv.addEventListener("pointermove", pointer);
+cv.addEventListener("pointerdown", pointer);
+cv.addEventListener("pointerleave", () => { hover = null; draw(); rangeReadout(); });
+cv.addEventListener("pointerup", e => { if (e.pointerType !== "mouse") setTimeout(() => { hover = null; draw(); rangeReadout(); }, 1600); });
+
+function rangeReadout() {
+  const pts = seriesForRange(); if (pts.length < 2) { $("readout").innerHTML = "&nbsp;"; return; }
+  const base = st.range === "1D" && st.quote ? st.quote.prev : pts[0].v, ch = pts[pts.length-1].v / base - 1;
+  const label = {"1D":"Today", "1M":"Past month", "3M":"Past 3 months", "6M":"Past 6 months", "1Y":"Past year"}[st.range];
+  $("readout").innerHTML = `${label} <b class="num ${ch >= 0 ? "up" : "down"}">${pct(ch)}</b>`;
+}
+
+/* ---------- render ---------- */
+function renderQuote() {
+  const q = st.quote; if (!q) return;
+  const el = $("price");
+  if (st.lastPrice != null && q.price !== st.lastPrice) {
+    el.classList.remove("flash-up","flash-down"); void el.offsetWidth;
+    el.classList.add(q.price > st.lastPrice ? "flash-up" : "flash-down"); setTimeout(() => el.classList.remove("flash-up","flash-down"), 1200);
+  }
+  st.lastPrice = q.price; el.textContent = usd(q.price);
+  $("chg").innerHTML = `<span class="${q.change >= 0 ? "up" : "down"}">${sgn(q.change)} (${pct(q.pctc)})</span> <span class="meta">today</span>`;
+  const m = $("mkt"); m.classList.toggle("open", q.open); m.lastElementChild.textContent = st.demo ? "Sample data" : q.open ? "Market open" : "Market closed";
+  $("updated").textContent = st.demo ? "Sample data, not real prices" : `${q.open ? "Live · updates every minute" : "Last trade"} · ${dfmt(q.time, {month:"short", day:"numeric"})}, ${tfmt(q.time)}`;
+  document.title = st.demo ? "GOOGL Watch" : `${usd(q.price)} GOOGL Watch`;
+}
+function renderModel() {
+  const m = st.model = buildModel(); if (!m) return;
+  const b = $("vbadge"), cls = m.score >= 2 ? "bull" : m.score <= -2 ? "bear" : "flat";
+  b.className = "vbadge " + cls; b.textContent = {bull:"Bullish", bear:"Bearish", flat:"Neutral"}[cls];
+  $("vscore").textContent = `${m.sigs.filter(s => s.v > 0).length} of ${m.max} signals up, ${m.sigs.filter(s => s.v < 0).length} down`;
+  $("pMid").textContent = usd(m.mid);
+  $("pRange").textContent = `${usd(m.lo).replace(".00","")}–${usd(m.hi).replace(".00","")}`;
+  $("pRange").style.fontSize = "14px";
+  $("pUp").textContent = Math.round(m.pUp*100) + "%";
+  $("signals").innerHTML = m.sigs.map(s => `<li><span class="n">${s.n}</span><span class="chip ${s.v > 0 ? "bull" : s.v < 0 ? "bear" : "flat"}">${s.v > 0 ? "UP" : s.v < 0 ? "DOWN" : "NEUTRAL"}</span><span class="d">${s.d}</span></li>`).join("");
+  $("backtest").textContent = m.tot
+    ? `Track record: over the past year these signals called the direction of the next 21 trading days correctly ${Math.round(m.hit/m.tot*100)}% of the time (${m.hit} of ${m.tot} days). Simply guessing "up" every day would have been right ${Math.round(m.base*100)}% of the time. The "likely range" is where the model expects the price 8 times out of 10.`
+    : `The "likely range" is where the model expects the price 8 times out of 10.`;
+}
+function renderStats() {
+  const s = yearStats(); if (!s) return;
+  const q = st.quote, cur = q ? q.price : st.daily[st.daily.length-1].c;
+  const cell = (l, v, x="") => `<div><small>${l}</small><b>${v}</b>${x ? `<div class="x">${x}</div>` : ""}</div>`;
+  $("stats").innerHTML = [
+    cell("1-year return", `<span class="${s.ret >= 0 ? "up" : "down"}">${pct(s.ret)}</span>`, `from ${usd(s.start.c)} on ${dfmt(s.start.t, {month:"short", day:"numeric", year:"numeric"})}`),
+    cell("Volatility", pct(s.vol, false), "annualized"),
+    cell("High", usd(s.hi.c), `${dfmt(s.hi.t)} · now ${pct(cur/s.hi.c-1)}`),
+    cell("Low", usd(s.lo.c), `${dfmt(s.lo.t)} · now ${pct(cur/s.lo.c-1)}`),
+    cell("Best day", `<span class="up">${pct(s.best.r)}</span>`, dfmt(s.best.t)),
+    cell("Worst day", `<span class="down">${pct(s.worst.r)}</span>`, dfmt(s.worst.t)),
+    cell("Largest drop", `<span class="down">${pct(s.mdd)}</span>`, "peak to trough"),
+    cell("Up days", `${s.ups} of ${s.days}`, `${Math.round(s.ups/s.days*100)}% of sessions`),
+  ].join("");
+}
+function renderAll() { renderQuote(); renderModel(); renderStats(); draw(); rangeReadout(); }
+
+function banner(html, err) { const b = $("banner"); b.hidden = !html; b.className = "banner" + (err ? " err" : ""); b.innerHTML = html || ""; const o = b.querySelector("[data-open]"); if (o) o.onclick = () => { $("settings").open = true; $("key").focus(); }; }
+
+/* ---------- loading + live updates ---------- */
+function clearTimers() { st.timers.forEach(clearTimeout); st.timers = []; }
+function later(fn, ms) { st.timers.push(setTimeout(fn, ms)); }
+
+async function start() {
+  clearTimers();
+  if (!st.key) { st.demo = true; makeDemo(); renderAll();
+    banner(`You're looking at sample data. <button data-open>Add your free Twelve Data key</button> to see real GOOGL prices.`); return; }
+  st.demo = false; banner("");
+  $("mkt").lastElementChild.textContent = "Loading";
+  try {
+    await loadDaily(); await loadQuote(); renderAll();
+    loadIntraday().then(() => st.range === "1D" && (draw(), rangeReadout())).catch(() => {});
+    store.set("gw_daily_at", Date.now());
+    tick();
+  } catch (e) { fail(e); }
+}
+async function tick() {
+  // poll the quote every minute while the market is open, every 15 minutes otherwise; intraday every 5 minutes when open
+  const open = st.quote && st.quote.open;
+  later(async () => {
+    if (document.hidden) return tick();
+    try {
+      await loadQuote(); renderQuote(); renderStats();
+      const n = (st.n = (st.n || 0) + 1);
+      if (st.quote.open && n % 5 === 0) { await loadIntraday(); }
+      if (n % 30 === 0) { await loadDaily(); }   // re-fit the model twice an hour
+      if (st.quote.open || n % 30 === 0) { renderModel(); draw(); if (hover == null) rangeReadout(); }
+    } catch (e) { if (e.code === 429) banner("Twelve Data's per-minute limit was hit. Prices will resume shortly.", true); }
+    tick();
+  }, open ? 60000 : 900000);
+}
+function fail(e) {
+  const msg = e.code === 401 || /api ?key/i.test(e.message) ? "Twelve Data did not accept that API key. Check it and save it again." :
+              e.code === 429 ? "Twelve Data's request limit was reached. Wait a minute and tap Refresh now." :
+              e instanceof TypeError ? "Couldn't reach Twelve Data. Check your connection and tap Refresh now." : e.message;
+  banner(`${msg} <button data-open>Open data settings</button>`, true);
+  $("mkt").lastElementChild.textContent = "No data";
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && st.key && !st.demo) loadQuote().then(() => { renderQuote(); draw(); }).catch(() => {}); });
+
+/* ---------- controls ---------- */
+function setRange(r) { st.range = r; store.set("gw_range", r); document.querySelectorAll("#ranges button").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === r)); document.querySelector(".chart-foot").hidden = r === "1D"; hover = null; draw(); rangeReadout(); }
+document.querySelectorAll("#ranges button").forEach(b => b.onclick = () => setRange(b.dataset.r));
+$("showFc").onchange = () => { store.set("gw_fc", $("showFc").checked ? "1" : "0"); draw(); };
+$("saveKey").onclick = () => { st.key = $("key").value.trim(); store.set("gw_key", st.key || null); st.n = 0; start(); if (st.key) $("settings").open = false; };
+$("useDemo").onclick = () => { st.key = ""; $("key").value = ""; store.set("gw_key", null); start(); };
+$("refresh").onclick = () => start();
+$("key").value = st.key;
+if (store.get("gw_fc") === "0") $("showFc").checked = false;
+setRange(st.range);
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(draw, 80); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+document.fonts && document.fonts.ready.then(draw);
+start();
+</script>
+</body>
+</html>

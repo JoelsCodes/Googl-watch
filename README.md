@@ -1,0 +1,18 @@
+# GOOGL Watch
+
+A one-page phone web app for Alphabet (GOOGL): the live price, a chart of the last 365 days (plus today's intraday move), year stats, and a 30-day trend forecast.
+
+## Use it
+1. Get a free API key at https://twelvedata.com (the free plan allows 800 requests a day).
+2. Open the app, tap **Data source**, paste the key and tap **Save and load**. The key stays in your browser on that device.
+3. On iPhone: Share → Add to Home Screen. On Android: menu → Add to Home screen.
+
+Without a key it shows clearly labeled sample data.
+
+## How the forecast works
+Five signals vote up or down: price vs the 50-day average, the 50-day vs the 200-day average, MACD momentum, RSI(14), and the slope of the last 60 closes. The projection blends the one-year average daily return with the recent trend and a small tilt from the vote, and its range comes from the last 60 days' volatility (80% band). The app also backtests the signals over the past year and shows how often they were right next to an "always up" baseline.
+
+It cannot see news or earnings. This is not financial advice.
+
+## Hosting
+Plain static file. Settings → Pages → Deploy from branch `main`, folder `/`.
