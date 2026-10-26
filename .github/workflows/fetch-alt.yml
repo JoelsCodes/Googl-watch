@@ -1,0 +1,42 @@
+# Downloads non-price data for research/altdata.py and adds it to the "data" branch under alt/.
+# Run it from the Actions tab (Fetch alternative data → Run workflow).
+name: Fetch alternative data
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start from the existing data branch
+        run: |
+          git clone -q --depth 1 -b data "https://github.com/${{ github.repository }}.git" out
+          rm -rf out/.git && mkdir -p out/alt
+      - name: Download
+        working-directory: out/alt
+        run: |
+          set -e
+          UA="googl-watch-research/1.0 (github.com/${{ github.repository }})"
+          get() { for i in 1 2 3 4 5; do curl -fsSL -A "$UA" "$2" -o "$1" && return 0; sleep $((i*10)); done; echo "failed: $2"; return 1; }
+          # Wikipedia daily page views (from July 2015)
+          for a in Google Alphabet_Inc. Google_Gemini YouTube Sundar_Pichai; do
+            get "wiki_$a.json" "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/$a/daily/20150701/$(date -u +%Y%m%d)"
+          done
+          # FRED daily series: policy uncertainty, junk-bond spread, yield curve, dollar, oil, bitcoin
+          for s in USEPUINDXD BAMLH0A0HYM2 T10Y2Y DTWEXBGS DCOILWTICO CBBTCUSD; do
+            get "fred_$s.csv" "https://fred.stlouisfed.org/graph/fredgraph.csv?id=$s"
+          done
+          # New York (Central Park) daily weather
+          get weather_nyc.json "https://archive-api.open-meteo.com/v1/archive?latitude=40.78&longitude=-73.97&start_date=2004-08-01&end_date=$(date -u -d yesterday +%F)&daily=cloud_cover_mean,sunshine_duration,precipitation_sum,temperature_2m_mean&timezone=America%2FNew_York"
+          # Geomagnetic activity (Kp/Ap) and sunspot number since 1932
+          get kp_sunspots.txt "https://kp.gfz-potsdam.de/app/files/Kp_ap_Ap_SN_F107_since_1932.txt"
+          ls -la
+      - name: Commit to the data branch
+        run: |
+          cd out
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm "Alternative data $(date -u +%F)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data
