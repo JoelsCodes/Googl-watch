@@ -84,12 +84,9 @@ button{font:inherit;color:inherit}
 /* lower grid */
 .grid{display:grid;gap:14px}
 @media (min-width:760px){.grid{grid-template-columns:1.15fr 1fr}}
-.verdict{display:flex;align-items:center;gap:12px;margin:10px 0 6px;flex-wrap:wrap}
-.vbadge{font-family:var(--f-display);font-weight:700;font-size:20px;padding:6px 14px;border-radius:10px}
-.vbadge.bull{background:color-mix(in srgb,var(--up) 16%,transparent);color:var(--up)}
-.vbadge.bear{background:color-mix(in srgb,var(--down) 16%,transparent);color:var(--down)}
-.vbadge.flat{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
-.score{font-size:13px;color:var(--muted)}
+.lead{font-size:17px;line-height:1.45;margin:10px 0 0;text-wrap:pretty}
+.lead b{font-family:var(--f-num);font-weight:600;font-variant-numeric:tabular-nums}
+.sig li .r{grid-column:1/-1;font-size:12.5px;color:var(--muted);font-style:italic}
 .proj{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
 .proj div{background:var(--bg);border-radius:10px;padding:10px;min-width:0}
 .proj small,.stats small{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
@@ -178,22 +175,24 @@ footer{font-size:12px;color:var(--muted);line-height:1.5}
     </div>
     <div class="cv" id="cv"><canvas id="chart" aria-label="GOOGL price chart" role="img"></canvas></div>
     <div class="chart-foot">
-      <label class="tog"><input type="checkbox" id="showFc" checked> Show 30-day forecast</label>
-      <div class="legend"><span style="--c:var(--accent)">Price</span><span style="--c:var(--muted)">50-day avg</span><span style="--c:var(--warn)">Forecast</span></div>
+      <label class="tog"><input type="checkbox" id="showFc" checked> Show 30-day range</label>
+      <div class="legend"><span style="--c:var(--accent)">Price</span><span style="--c:var(--muted)">50-day avg</span><span style="--c:var(--warn)">Middle estimate</span></div>
     </div>
   </section>
 
   <div class="grid">
-    <section class="card" aria-label="Trend outlook">
-      <h2>Trend outlook · next 30 days</h2>
-      <div class="verdict"><span class="vbadge flat" id="vbadge">—</span><span class="score" id="vscore"></span></div>
+    <section class="card" aria-label="Next 30 days">
+      <h2>Next 30 days</h2>
+      <p class="lead" id="lead">&nbsp;</p>
       <div class="proj">
-        <div><small>Median target</small><b id="pMid">—</b></div>
+        <div><small>Middle estimate</small><b id="pMid">—</b></div>
         <div><small>Likely range</small><b id="pRange">—</b></div>
         <div><small>Chance higher</small><b id="pUp">—</b></div>
       </div>
-      <ul class="sig" id="signals"></ul>
       <p class="note" id="backtest"></p>
+      <h3 class="sub">Background signals</h3>
+      <p class="note" style="margin-top:4px">Shown for context, not as a prediction. In tests on 22 years of GOOGL prices none of these, nor machine learning or chart-pattern matching, called the direction better than “it usually goes up”. <a href="https://github.com/JoelsCodes/Googl-watch/blob/main/research/RESULTS.md" target="_blank" rel="noopener">See the research</a>.</p>
+      <ul class="sig" id="signals"></ul>
     </section>
 
     <section class="card" aria-label="Last 365 days">
@@ -227,7 +226,7 @@ footer{font-size:12px;color:var(--muted);line-height:1.5}
     </div>
   </details>
 
-  <footer>The forecast is a statistical estimate from past prices (trend, momentum and volatility). It does not read the news section, cannot see earnings or the wider market, and it is often wrong. News reactions show what happened on the day a story came out, not proof that the story caused the move. This is not financial advice.</footer>
+  <footer>The 30-day range is a statistical estimate from GOOGL's recent swings and long-run trend. It does not read the news section, cannot see earnings or the wider market, and it is often wrong. News reactions show what happened on the day a story came out, not proof that the story caused the move. This is not financial advice.</footer>
 </div>
 
 <script>
@@ -353,14 +352,14 @@ function indicators(c) {
 function forecastAt(ind, lr, j) {
   const sigs = signalsAt(ind, j), score = sigs.reduce((s,x) => s+x.v, 0);
   const vol = sd(lr.slice(j-60, j));                  // daily volatility, recent regime
-  const longDrift = mean(lr.slice(Math.max(0, j-756), j)); // up to 3 years of average daily log return
-  // The accuracy check on real GOOGL data (Sep 2022 to Sep 2026) showed the recent-trend term made the forecast call
-  // declines that mostly did not come: "Bearish" days still rose 58% of the time. So the long-run drift now anchors
-  // the forecast and the signals only tilt it (at most about +/-2% over 21 days).
-  const mu = longDrift + score*0.0002;
-  return {sigs, score, vol, mu, pUp: Phi(mu*H / (vol*Math.sqrt(H)))};
+  // Direction: research/RESULTS.md tested 12 approaches on 2004-2026 data and none beat "it usually goes up", so the
+  // middle estimate follows GOOGL's average rise over up to 3 years and the signals no longer move it.
+  const mu = mean(lr.slice(Math.max(0, j-756), j));
+  // chance higher: how often a 21-day stretch ended higher over the same window (an observed rate, not a model)
+  let ups = 0, tot = 0; const c = ind.c;
+  for (let k = Math.max(0, j-756); k + H <= j; k++) { tot++; if (c[k+H] > c[k]) ups++; }
+  return {sigs, score, vol, mu, pUp: tot ? ups/tot : 0.5};
 }
-const verdictOf = score => score >= 2 ? "bull" : score <= -2 ? "bear" : "flat";
 
 function buildModel() {
   const d = st.daily; if (d.length < 80) return null;
@@ -388,22 +387,20 @@ function cachedAccuracy(d, c, ind, lr) {
 /* Walk-forward test: replay the forecast on every past trading day that has 21 days of known outcome after it. */
 function accuracy(d, c, ind, lr) {
   const n = c.length, from = 260, to = n-1-H; if (to - from < 60) return null;
-  const z = 1.2816, b = {bull:[], flat:[], bear:[]};
-  let N = 0, dirHit = 0, upDays = 0, err = 0, errNaive = 0, inBand = 0, saidUp = 0, saidUpHit = 0, pSum = 0;
+  const z = 1.2816, sig = {};
+  let N = 0, upDays = 0, err = 0, errNaive = 0, inBand = 0, above = 0, below = 0, pSum = 0;
   for (let j = from; j <= to; j++) {
-    const f = forecastAt(ind, lr, j), act = c[j+H]/c[j] - 1;
-    const mid = Math.exp(f.mu*H), s = f.vol*Math.sqrt(H);
+    const f = forecastAt(ind, lr, j), act = c[j+H]/c[j] - 1, lr21 = Math.log(1+act), s = f.vol*Math.sqrt(H);
     N++; if (act > 0) upDays++;
-    if (Math.sign(f.mu) === Math.sign(act)) dirHit++;
-    err += Math.abs(c[j]*mid / c[j+H] - 1); errNaive += Math.abs(c[j] / c[j+H] - 1);
-    const lr21 = Math.log(1+act); if (lr21 >= f.mu*H - z*s && lr21 <= f.mu*H + z*s) inBand++;
-    pSum += f.pUp; if (f.pUp >= 0.5) { saidUp++; if (act > 0) saidUpHit++; }
-    b[verdictOf(f.score)].push(act);
+    err += Math.abs(c[j]*Math.exp(f.mu*H) / c[j+H] - 1); errNaive += Math.abs(c[j] / c[j+H] - 1);
+    if (lr21 > f.mu*H + z*s) above++; else if (lr21 < f.mu*H - z*s) below++; else inBand++;
+    pSum += f.pUp;
+    f.sigs.forEach(x => { const r = sig[x.n] || (sig[x.n] = {up:[], down:[]}); if (x.v) r[x.v > 0 ? "up" : "down"].push(act > 0 ? 1 : 0); });
   }
-  const grp = a => a.length ? {n:a.length, avg:mean(a), up:a.filter(x => x > 0).length/a.length} : null;
-  return {N, start:d[from].t, end:d[to].t, dir:dirHit/N, base:upDays/N, err:err/N, errNaive:errNaive/N,
-    cover:inBand/N, pAvg:pSum/N, saidUp, saidUpHit:saidUp ? saidUpHit/saidUp : null,
-    bull:grp(b.bull), flat:grp(b.flat), bear:grp(b.bear), indep:Math.floor(N/H)};
+  const rate = a => a.length ? {n:a.length, up:mean(a)} : null;
+  Object.keys(sig).forEach(k => sig[k] = {up:rate(sig[k].up), down:rate(sig[k].down)});
+  return {N, start:d[from].t, end:d[to].t, base:upDays/N, err:err/N, errNaive:errNaive/N,
+    cover:inBand/N, above:above/N, below:below/N, pAvg:pSum/N, sig, indep:Math.floor(N/H)};
 }
 
 function yearStats() {
@@ -540,42 +537,39 @@ function renderQuote() {
 }
 function renderModel() {
   const m = st.model = buildModel(); if (!m) return;
-  const b = $("vbadge"), cls = m.score >= 2 ? "bull" : m.score <= -2 ? "bear" : "flat";
-  b.className = "vbadge " + cls; b.textContent = {bull:"Bullish", bear:"Bearish", flat:"Neutral"}[cls];
-  $("vscore").textContent = `${m.sigs.filter(s => s.v > 0).length} of ${m.max} signals up, ${m.sigs.filter(s => s.v < 0).length} down`;
+  const P = v => Math.round(v*100) + "%", r0 = v => usd(v).replace(/\.\d\d$/, "");
+  $("lead").innerHTML = `8 times in 10, GOOGL should close between <b>${r0(m.lo)}</b> and <b>${r0(m.hi)}</b> on ${dfmt(st.fc.t[H], {weekday:"short", month:"short", day:"numeric"})}.`;
   $("pMid").textContent = usd(m.mid);
-  $("pRange").textContent = `${usd(m.lo).replace(".00","")}–${usd(m.hi).replace(".00","")}`;
+  $("pRange").textContent = `${r0(m.lo)}–${r0(m.hi)}`;
   $("pRange").style.fontSize = "14px";
-  $("pUp").textContent = Math.round(m.pUp*100) + "%";
-  $("signals").innerHTML = m.sigs.map(s => `<li><span class="n">${s.n}</span><span class="chip ${s.v > 0 ? "bull" : s.v < 0 ? "bear" : "flat"}">${s.v > 0 ? "UP" : s.v < 0 ? "DOWN" : "NEUTRAL"}</span><span class="d">${s.d}</span></li>`).join("");
-  const past = m.acc && m.acc[cls];
-  $("backtest").textContent = (past ? `When the app said ${b.textContent} before, GOOGL rose over the next 21 trading days ${Math.round(past.up*100)}% of the time, by ${pct(past.avg)} on average (${past.n} days). ` : "") + `The "likely range" is where the model expects the price 8 times out of 10. See the accuracy check below for how these forecasts did on past dates.`;
+  $("pUp").textContent = P(m.pUp);
+  const rec = m.acc && m.acc.sig;
+  $("signals").innerHTML = m.sigs.map(s => {
+    const r = rec && rec[s.n], line = r && r.up && r.down ? `Past record: when UP, GOOGL rose ${P(r.up.up)} of the time over 21 days; when DOWN, ${P(r.down.up)}.` : "";
+    return `<li><span class="n">${s.n}</span><span class="chip ${s.v > 0 ? "bull" : s.v < 0 ? "bear" : "flat"}">${s.v > 0 ? "UP" : s.v < 0 ? "DOWN" : "NEUTRAL"}</span><span class="d">${s.d}</span>${line ? `<span class="r">${line}</span>` : ""}</li>`;
+  }).join("");
+  $("backtest").textContent = `The range comes from how much GOOGL has swung over the last 60 trading days. The middle estimate follows its average rise over the last 3 years. “Chance higher” is how often a 21-day stretch actually ended higher in those 3 years.`;
   renderAccuracy(m.acc);
 }
 function renderAccuracy(a) {
   const el = $("acc"); if (!a) { el.innerHTML = `<p class="note">Not enough price history yet to test past forecasts.</p>`; return; }
   const P = v => Math.round(v*100) + "%", good = (x, y) => x > y ? "up" : "down";
   const row = (l, app, base, cls) => `<tr><th scope="row">${l}</th><td class="num ${cls || ""}">${app}</td><td class="num">${base}</td></tr>`;
-  const g = (k, l) => { const x = a[k]; return x ? `<tr><th scope="row">${l}</th><td class="num">${x.n}</td><td class="num ${x.avg >= 0 ? "up" : "down"}">${pct(x.avg)}</td><td class="num">${P(x.up)}</td></tr>` : `<tr><th scope="row">${l}</th><td class="num">0</td><td>—</td><td>—</td></tr>`; };
-  const beatDir = a.dir > a.base, beatErr = a.err < a.errNaive, coverOk = Math.abs(a.cover - 0.8) <= 0.07;
+  const coverOk = Math.abs(a.cover - 0.8) <= 0.05, calOk = Math.abs(a.pAvg - a.base) <= 0.05;
   el.innerHTML = `
-    <p class="note" style="margin-top:6px">The app replayed its own 30-day forecast on each of <b>${a.N.toLocaleString()}</b> past trading days, from ${dfmt(a.start)} to ${dfmt(a.end)}, using only the prices known on that day, then checked what GOOGL actually did 21 trading days later.</p>
+    <p class="note" style="margin-top:6px">The app replayed its 30-day range on each of <b>${a.N.toLocaleString()}</b> past trading days, from ${dfmt(a.start)} to ${dfmt(a.end)}, using only the prices known on that day, then checked where GOOGL actually closed 21 trading days later.</p>
     <div class="tw"><table class="acc">
-      <thead><tr><th></th><th>App</th><th>Simple rule</th></tr></thead>
+      <thead><tr><th></th><th>App</th><th>Should be</th></tr></thead>
       <tbody>
-        ${row("Direction right", P(a.dir), `${P(a.base)} <span class="x">always “up”</span>`, good(a.dir, a.base))}
-        ${row("Typical target miss", pct(a.err, false), `${pct(a.errNaive, false)} <span class="x">“no change”</span>`, good(a.errNaive, a.err))}
-        ${row("Inside likely range", P(a.cover), `80% <span class="x">target</span>`, coverOk ? "up" : "down")}
-        ${row("Said “higher” ≥50%, was right", a.saidUpHit == null ? "—" : P(a.saidUpHit), `${P(a.base)} <span class="x">base rate</span>`, a.saidUpHit != null && a.saidUpHit > a.base ? "up" : "down")}
+        ${row("Inside the 80% range", P(a.cover), "80%", coverOk ? "up" : "down")}
+        ${row("Ended above the range", P(a.above), "10%", Math.abs(a.above - 0.1) <= 0.04 ? "up" : "down")}
+        ${row("Ended below the range", P(a.below), "10%", Math.abs(a.below - 0.1) <= 0.04 ? "up" : "down")}
+        ${row("Stated chance higher (average)", P(a.pAvg), `${P(a.base)} <span class="x">actually rose</span>`, calOk ? "up" : "down")}
+        ${row("Middle estimate miss", pct(a.err, false), `${pct(a.errNaive, false)} <span class="x">“no change”</span>`, good(a.errNaive, a.err))}
       </tbody></table></div>
-    <h3 class="sub">What happened after each call</h3>
-    <div class="tw"><table class="acc">
-      <thead><tr><th></th><th>Days</th><th>Avg next 21 days</th><th>Went up</th></tr></thead>
-      <tbody>${g("bull", "Bullish")}${g("flat", "Neutral")}${g("bear", "Bearish")}</tbody></table></div>
     <p class="note"><b>Verdict:</b> ${[
-      beatDir ? `Called direction better than always guessing “up” (${P(a.dir)} vs ${P(a.base)}).` : `Did not beat simply guessing “up” on direction (${P(a.dir)} vs ${P(a.base)}).`,
-      beatErr ? `Its price targets were closer than assuming no change.` : `Its price targets were no closer than assuming the price stays put.`,
-      coverOk ? `The likely range was about the right width.` : a.cover < 0.8 ? `The likely range was too narrow (held the real price ${P(a.cover)} of the time, not 80%).` : `The likely range was wider than needed (held the real price ${P(a.cover)} of the time).`
+      coverOk ? `The range was about the right width.` : a.cover < 0.8 ? `The range was too narrow: it held the real price ${P(a.cover)} of the time, not 80%.` : `The range was wider than needed: it held the real price ${P(a.cover)} of the time.`,
+      a.err < a.errNaive ? `The middle estimate was a little closer than assuming no change.` : `The middle estimate was no closer than assuming no change. Treat it as the centre of the range, not a target.`
     ].join(" ")}</p>
     <p class="note">Forecasts on neighbouring days overlap, so this is closer to ${a.indep} independent tests than ${a.N.toLocaleString()}. Past accuracy does not promise future accuracy.</p>`;
 }
