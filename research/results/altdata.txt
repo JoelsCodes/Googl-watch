@@ -1,0 +1,99 @@
+29 signals. Coverage starts: wiki_attention_spike 2015, wiki_attention_trend 2015, wiki_youtube_spike 2015, wiki_ceo_spike 2015, wiki_gemini_trend 2024, junk_spread_chg21 2023, dollar_chg21 2006, bitcoin_chg5 2014, bitcoin_chg21 2015
+
+=== Next 1 trading day: development 2012-21 → holdout 2022-now ===
+signal                    dev IC  dev p dev AUC | hold IC hold p hold AUC  verdict
++monday                    0.016  0.211   0.505 |   0.001  0.492    0.503  
++friday                    0.001  0.476   0.501 |   0.040  0.085    0.520  
++turn_of_month             0.037  0.033   0.514 |   0.021  0.232    0.510  dev only, failed holdout
++pre_holiday               0.057  0.002   0.511 |  -0.032  0.868    0.493  dev only, failed holdout
++sell_in_may               0.014  0.240   0.506 |   0.012  0.342    0.513  
+-september                 0.009  0.317   0.499 |  -0.004  0.552    0.498  
+-santa                     0.008  0.350   0.505 |   0.023  0.211    0.505  
++earnings_month            0.037  0.033   0.518 |   0.037  0.097    0.514  dev only, failed holdout
++moon_illum                0.019  0.175   0.518 |   0.002  0.472    0.507  
+-near_new_moon             0.015  0.226   0.508 |   0.003  0.465    0.508  
++nyc_cloudy                0.019  0.173   0.518 |  -0.010  0.634    0.493  
+-nyc_sunshine              0.046  0.010   0.526 |  -0.016  0.713    0.492  dev only, failed holdout
++nyc_rain                  0.040  0.023   0.513 |  -0.036  0.896    0.483  dev only, failed holdout
++nyc_temp_anom             0.003  0.431   0.503 |  -0.016  0.705    0.495  
+-geomag_storm_6d           0.020  0.154   0.498 |  -0.009  0.623    0.491  
+-geomag_ap                 0.013  0.252   0.504 |  -0.010  0.632    0.483  
+-sunspots                  0.012  0.275   0.513 |  -0.008  0.603    0.480  
+-wiki_attention_spike      0.034  0.086   0.513 |  -0.037  0.903    0.480  
+-wiki_attention_trend      0.025  0.162   0.513 |  -0.035  0.890    0.478  
++wiki_youtube_spike        0.040  0.056   0.516 |  -0.009  0.619    0.484  
+-wiki_ceo_spike            0.043  0.043   0.525 |  -0.015  0.703    0.497  dev only, failed holdout
++policy_uncertainty        0.021  0.143   0.507 |   0.023  0.213    0.489  
+-yield_curve               0.022  0.137   0.509 |  -0.005  0.566    0.503  
+-dollar_chg21              0.027  0.084   0.511 |  -0.026  0.816    0.476  
++oil_chg21                 0.019  0.164   0.513 |  -0.006  0.586    0.495  
++bitcoin_chg5              0.023  0.170   0.519 |  -0.054  0.970    0.467  
++bitcoin_chg21             0.031  0.096   0.540 |   0.013  0.320    0.512  
+Logistic, all long-history signals     dev AUC 0.537 (p 0.002) | holdout AUC 0.481 (p 0.797)
+Gradient boosting, same signals        dev AUC 0.513 (p 0.068) | holdout AUC 0.487 (p 0.653)
+
+=== Next 5 trading days: development 2012-21 → holdout 2022-now ===
+signal                    dev IC  dev p dev AUC | hold IC hold p hold AUC  verdict
++monday                    0.028  0.263   0.506 |  -0.059  0.821    0.504  
++friday                    0.011  0.399   0.492 |   0.014  0.414    0.491  
++turn_of_month             0.022  0.308   0.507 |  -0.014  0.584    0.504  
++pre_holiday               0.019  0.336   0.502 |   0.022  0.364    0.500  
++sell_in_may               0.010  0.414   0.512 |  -0.009  0.555    0.499  
+-september                 0.056  0.103   0.508 |   0.002  0.491    0.491  
++santa                     0.013  0.386   0.500 |  -0.037  0.717    0.501  
++earnings_month            0.099  0.013   0.533 |   0.049  0.226    0.515  dev only, failed holdout
++moon_illum                0.022  0.312   0.513 |   0.034  0.298    0.501  
+-near_new_moon             0.032  0.234   0.512 |   0.030  0.323    0.516  
++nyc_cloudy                0.101  0.012   0.512 |  -0.068  0.852    0.485  dev only, failed holdout
+-nyc_sunshine              0.076  0.043   0.517 |  -0.078  0.887    0.471  dev only, failed holdout
++nyc_rain                  0.117  0.004   0.510 |  -0.026  0.657    0.468  dev only, failed holdout
++nyc_temp_anom             0.033  0.232   0.512 |   0.003  0.480    0.500  
++geomag_storm_6d           0.010  0.408   0.491 |   0.001  0.496    0.507  
++geomag_ap                 0.004  0.461   0.503 |  -0.004  0.525    0.506  
+-sunspots                  0.008  0.427   0.503 |  -0.044  0.753    0.488  
+-wiki_attention_spike      0.090  0.053   0.522 |  -0.081  0.895    0.454  
+-wiki_attention_trend      0.066  0.122   0.493 |  -0.003  0.521    0.479  
++wiki_youtube_spike        0.065  0.122   0.524 |   0.027  0.339    0.524  
+-wiki_ceo_spike            0.045  0.212   0.519 |  -0.040  0.734    0.479  
++policy_uncertainty        0.039  0.193   0.518 |  -0.007  0.543    0.499  
+-yield_curve               0.024  0.296   0.515 |  -0.010  0.563    0.490  
+-dollar_chg21              0.052  0.124   0.543 |   0.016  0.402    0.485  
++oil_chg21                 0.039  0.191   0.525 |   0.001  0.493    0.484  
+-bitcoin_chg5              0.012  0.412   0.479 |   0.139  0.015    0.561  
++bitcoin_chg21             0.015  0.390   0.518 |   0.040  0.267    0.517  
+Logistic, all long-history signals     dev AUC 0.497 (p 0.396) | holdout AUC 0.464 (p 0.935)
+Gradient boosting, same signals        dev AUC 0.471 (p 0.750) | holdout AUC 0.469 (p 0.817)
+
+=== Next 21 trading days: development 2012-21 → holdout 2022-now ===
+signal                    dev IC  dev p dev AUC | hold IC hold p hold AUC  verdict
++monday                    0.011  0.451   0.499 |   0.179  0.092    0.500  
+-friday                    0.066  0.238   0.493 |  -0.121  0.815    0.500  
++turn_of_month             0.003  0.486   0.500 |  -0.252  0.971    0.500  
++pre_holiday               0.193  0.017   0.508 |  -0.130  0.832    0.503  dev only, failed holdout
++sell_in_may               0.090  0.164   0.524 |  -0.049  0.641    0.491  
+-september                 0.120  0.096   0.511 |   0.004  0.489    0.491  
+-santa                     0.155  0.046   0.494 |  -0.016  0.548    0.487  dev only, failed holdout
++earnings_month            0.137  0.067   0.508 |   0.023  0.434    0.506  
+-moon_illum                0.007  0.470   0.495 |  -0.219  0.949    0.529  
++near_new_moon             0.063  0.247   0.496 |  -0.098  0.766    0.507  
++nyc_cloudy                0.001  0.497   0.493 |  -0.006  0.516    0.513  
+-nyc_sunshine              0.041  0.329   0.497 |   0.029  0.415    0.506  
++nyc_rain                  0.089  0.167   0.499 |  -0.012  0.534    0.497  
++nyc_temp_anom             0.137  0.068   0.483 |   0.241  0.035    0.541  
+-geomag_storm_6d           0.125  0.086   0.503 |  -0.048  0.639    0.464  
+-geomag_ap                 0.066  0.237   0.528 |   0.027  0.420    0.478  
+-sunspots                  0.011  0.452   0.524 |  -0.063  0.680    0.452  
+-wiki_attention_spike      0.204  0.037   0.525 |  -0.056  0.661    0.518  dev only, failed holdout
++wiki_attention_trend      0.043  0.357   0.509 |  -0.024  0.570    0.465  
++wiki_youtube_spike        0.103  0.184   0.519 |   0.360  0.003    0.543  
++wiki_ceo_spike            0.067  0.280   0.496 |   0.224  0.047    0.496  
++policy_uncertainty        0.136  0.070   0.569 |  -0.144  0.857    0.448  
+-yield_curve               0.005  0.480   0.519 |  -0.035  0.601    0.501  
+-dollar_chg21              0.114  0.107   0.555 |   0.105  0.217    0.534  
++oil_chg21                 0.126  0.086   0.552 |   0.076  0.288    0.495  
+-bitcoin_chg5              0.132  0.115   0.468 |  -0.181  0.912    0.472  
+-bitcoin_chg21             0.096  0.194   0.501 |  -0.313  0.991    0.352  
+Logistic, all long-history signals     dev AUC 0.470 (p 0.971) | holdout AUC 0.398 (p 0.949)
+Gradient boosting, same signals        dev AUC 0.445 (p 0.993) | holdout AUC 0.486 (p 0.496)
+
+81 signal tests. 13 looked significant in development (about 4 expected by chance alone). 0 also held on the holdout (about 0.7 expected by chance): none

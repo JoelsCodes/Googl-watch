@@ -36,6 +36,28 @@ The size of the next bar's move is again partly predictable: the usual size at t
 
 Full tables: `results/h1.txt` (next day), `results/1h.txt`, `results/5m.txt`.
 
+## Results, non-price signals (`altdata.py`)
+29 signals that are not stock-market indicators, each lined up with what was known at the close (anything published later is lagged a day), tested at 1, 5 and 21 trading days. Each signal's direction was fixed on 2012-2021, then checked once on 2022-now. Data comes from `.github/workflows/fetch-alt.yml`.
+
+- **Calendar:** Monday, Friday, turn of the month, day before a holiday, May-October, September, the Santa rally, earnings months.
+- **Moon:** illumination, days near a new moon.
+- **New York weather (Central Park):** cloud cover and sunshine vs normal for the month, heavy rain, temperature vs normal.
+- **Space weather:** a geomagnetic storm in the past 6 days, the daily Ap index, sunspot number.
+- **Public attention (Wikipedia page views):** spikes and trends for Google + Alphabet, YouTube, Sundar Pichai, Gemini.
+- **Macro mood (FRED):** newspaper-based economic policy uncertainty, the yield curve, the dollar, oil, Bitcoin over 5 and 21 days. (Junk-bond spreads and Gemini views only go back to 2023-24, too short to test.)
+- **All of them together** in logistic regression and gradient boosting, walk-forward.
+
+| | Count |
+|---|---|
+| Signal tests (29 signals x 3 horizons, minus short-history ones) | 81 |
+| Looked significant on 2012-2021 (p < 0.05) | 13 (about 4 expected by luck) |
+| Of those, also held on 2022-now in the same direction | **0** |
+| Combined models, holdout AUC | 0.40-0.49 |
+
+The 13 early "finds" included rain and cloudy New York days being followed by better returns, the day before holidays, turn of the month, earnings months, and drops in Wikipedia attention. Every one of them faded or reversed after 2021. A few signals looked good *only* on 2022-now (e.g. YouTube page-view spikes at 21 days, Bitcoin's last week at 5 days); those were not chosen in advance, and with 81 tests a few such hits are expected by chance.
+
+Full table: `results/altdata.txt`.
+
 ## What it means
 1. **Direction is not predictable from these inputs.** The best development-period signal (buy after drawdowns; AUC 0.60, p = 0.02 before correcting for testing 12 ideas) fell to 0.50 on the holdout. The same happened at 5 and 63 days. Everything else hovered around 0.5 in both periods.
 2. **"Patterns" did not repeat.** Matching the shape of the last 20 or 60 days to history gave coin-flip results.
@@ -45,11 +67,12 @@ Full tables: `results/h1.txt` (next day), `results/1h.txt`, `results/5m.txt`.
 
 ## Caveats
 - About 120 independent 21-day windows in development and 57 in the holdout, so small edges (AUC 0.52-0.55) cannot be ruled out, but none showed up consistently.
-- Not tested: news and sentiment text, options-market data, fundamentals and analyst revisions, intraday data. These are where professional edges usually come from, and they are mostly not free.
+- Not tested: news and sentiment text scored by a language model, options-market data, fundamentals and analyst revisions, credit-card or app-download data. These are where professional edges usually come from, and they are mostly not free.
 
 ## Reproduce
 ```
 pip install numpy pandas scipy scikit-learn lightgbm
 python research/experiments.py PATH_TO_DATA_BRANCH_CHECKOUT 21     # or 1, 5, 63 trading days
 python research/intraday.py PATH_TO_DATA_BRANCH_CHECKOUT 5m         # or 1h
+python research/altdata.py PATH_TO_DATA_BRANCH_CHECKOUT              # after running fetch-alt.yml
 ```
