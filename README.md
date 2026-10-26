@@ -16,7 +16,10 @@ Five signals vote up or down: price vs the 50-day average, the 50-day vs the 200
 ## Accuracy check
 The app replays its own forecast on every past trading day in the last ~5 years of data (one Twelve Data request), using only prices known on that day, and scores it against what happened 21 trading days later: direction vs always guessing "up", target error vs assuming no change, how often the price landed in the 80% range, and the average move after Bullish, Neutral and Bearish calls.
 
-It cannot see news or earnings. This is not financial advice.
+## News and reactions
+With a free [Finnhub](https://finnhub.io/register) key (Data source panel, or `#finnhub=KEY` in the setup link), the app loads a year of Alphabet headlines and matches each one to the first trading session it could move: the same day if published before the 4pm ET close, otherwise the next session. For each day it shows GOOGL's move, the Nasdaq-100's move (QQQ), the difference, how unusual it was against the previous 60 days, and the next 5 days. Headlines are tagged by topic (AI, Cloud, Earnings, Legal, Analysts, YouTube, Search & ads, Waymo & bets, Devices) with an average reaction per topic, plus search and sorting. General market stories that don't mention Alphabet are left out.
+
+The forecast does not use the news. It cannot see earnings dates either. This is not financial advice.
 
 ## Hosting
 Plain static file. Settings → Pages → Deploy from branch `main`, folder `/`.

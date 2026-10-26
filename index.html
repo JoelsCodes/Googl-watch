@@ -128,6 +128,28 @@ table.acc thead th{border-top:0;font-size:11.5px;font-weight:600;color:var(--mut
 table.acc td{font-variant-numeric:tabular-nums;white-space:nowrap}
 table.acc .x{display:block;font:11.5px var(--f-body);color:var(--muted)}
 h3.sub{font:600 13px var(--f-body);margin:16px 0 0;color:var(--fg)}
+.news-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.wrap>*{min-width:0}
+.nctl{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:12px}
+.nctl input,.nctl select{font:15px var(--f-body);padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);min-width:0}
+.nrow{display:flex;gap:8px}.nrow input{flex:1 1 auto}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.ndays{list-style:none;margin:12px 0 0;padding:0}
+.nd{border-top:1px solid var(--line);padding:12px 0}
+.nd-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nd-h .date{font-weight:600;font-size:14px;margin-right:auto}
+.nd-h .mv{font:600 16px var(--f-num);font-variant-numeric:tabular-nums}
+.nd-s{font-size:12.5px;color:var(--muted);margin-top:2px}
+.hl{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:7px}
+.hl li{font-size:14px;line-height:1.4;min-width:0;overflow-wrap:anywhere}
+.hl a{color:var(--fg);text-decoration:none}
+.hl a:hover,.hl a:focus-visible{text-decoration:underline}
+.hl span{display:block;font-size:12px;color:var(--muted)}
+.more{background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;margin-top:6px}
+.btn.wide{width:100%;margin-top:12px}
+.empty{font-size:14px;color:var(--muted);margin:12px 0 0}
 footer{font-size:12px;color:var(--muted);line-height:1.5}
 </style>
 </head>
@@ -186,6 +208,11 @@ footer{font-size:12px;color:var(--muted);line-height:1.5}
     <div id="acc"></div>
   </section>
 
+  <section class="card" aria-label="News and reactions" id="news">
+    <div class="news-head"><h2>News &amp; how GOOGL reacted</h2><span class="meta" id="newsMeta"></span></div>
+    <div id="newsBody"></div>
+  </section>
+
   <details class="card" id="settings">
     <summary>Data source</summary>
     <div class="form">
@@ -194,10 +221,13 @@ footer{font-size:12px;color:var(--muted);line-height:1.5}
       <div class="row"><input id="key" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste your Twelve Data key"><button class="btn" id="saveKey">Save and load</button></div>
       <div class="row"><button class="btn ghost" id="useDemo">Use sample data</button><button class="btn ghost" id="refresh">Refresh now</button></div>
       <p id="usage"></p>
+      <label for="fkey">News key (Finnhub)</label>
+      <p>News comes from <a href="https://finnhub.io/register" target="_blank" rel="noopener">Finnhub</a>. Its free plan covers a year of company news. Sign up, copy your API key, and paste it here.</p>
+      <div class="row"><input id="fkey" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste your Finnhub key"><button class="btn" id="saveF">Save and load news</button></div>
     </div>
   </details>
 
-  <footer>The forecast is a statistical estimate from past prices (trend, momentum and volatility). It cannot see news, earnings or the wider market, and it is often wrong. This is not financial advice.</footer>
+  <footer>The forecast is a statistical estimate from past prices (trend, momentum and volatility). It does not read the news section, cannot see earnings or the wider market, and it is often wrong. News reactions show what happened on the day a story came out, not proof that the story caused the move. This is not financial advice.</footer>
 </div>
 
 <script>
@@ -206,10 +236,13 @@ const SYM = "GOOGL", API = "https://api.twelvedata.com", H = 21; // ~30 calendar
 const $ = id => document.getElementById(id);
 const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
 
-// setup link: opening the app as …/#key=YOURKEY saves the key on this device, then removes it from the address bar
+// setup link: opening the app as …/#key=TWELVEDATAKEY&finnhub=FINNHUBKEY saves the keys on this device, then removes them from the address bar
 (function () {
-  const m = location.hash.match(/^#key=([A-Za-z0-9]+)$/);
-  if (m) { store.set("gw_key", m[1]); history.replaceState(null, "", location.pathname + location.search); }
+  const h = new URLSearchParams(location.hash.slice(1)), ok = v => v && /^[A-Za-z0-9]+$/.test(v);
+  let hit = false;
+  if (ok(h.get("key"))) { store.set("gw_key", h.get("key")); hit = true; }
+  if (ok(h.get("finnhub"))) { store.set("gw_fkey", h.get("finnhub")); hit = true; }
+  if (hit) history.replaceState(null, "", location.pathname + location.search);
 })();
 const st = { key: store.get("gw_key") || "", demo: false, daily: [], intraday: [], quote: null, range: store.get("gw_range") || "1Y", fc: null, model: null, lastPrice: null, timers: [] };
 
@@ -231,7 +264,7 @@ async function td(path, params) {
   }
   return j;
 }
-const parseSeries = j => (j.values || []).map(v => ({t: new Date(v.datetime.replace(" ", "T")), o:+v.open, h:+v.high, l:+v.low, c:+v.close, v:+v.volume})).reverse();
+const parseSeries = j => (j.values || []).map(v => ({t: new Date(v.datetime.length === 10 ? v.datetime + "T00:00" : v.datetime.replace(" ", "T")), ds: v.datetime.slice(0,10), o:+v.open, h:+v.high, l:+v.low, c:+v.close, v:+v.volume})).reverse();
 
 async function loadDaily() {
   // ~5 years: 365 calendar days to show, the rest feeds the 200-day average and the accuracy check (still 1 request)
@@ -569,12 +602,13 @@ function later(fn, ms) { st.timers.push(setTimeout(fn, ms)); }
 
 async function start() {
   clearTimers();
-  if (!st.key) { st.demo = true; makeDemo(); renderAll();
+  if (!st.key) { st.demo = true; makeDemo(); renderAll(); renderNews();
     banner(`You're looking at sample data. <button data-open>Add your free Twelve Data key</button> to see real GOOGL prices.`); return; }
   st.demo = false; banner("");
   $("mkt").lastElementChild.textContent = "Loading";
   try {
     await loadDaily(); await loadQuote(); renderAll();
+    loadNews();
     loadIntraday().then(() => st.range === "1D" && (draw(), rangeReadout())).catch(() => {});
     store.set("gw_daily_at", Date.now());
     tick();
@@ -589,7 +623,7 @@ async function tick() {
       await loadQuote(); renderQuote(); renderStats();
       const n = (st.n = (st.n || 0) + 1);
       if (st.quote.open && n % 5 === 0) { await loadIntraday(); }
-      if (n % 30 === 0) { await loadDaily(); }   // re-fit the model twice an hour
+      if (n % 30 === 0) { await loadDaily(); if (nst.items.length) { buildReactions(); renderNews(); } }   // re-fit the model twice an hour
       if (st.quote.open || n % 30 === 0) { renderModel(); draw(); if (hover == null) rangeReadout(); }
     } catch (e) { if (e.code === 429) banner("Twelve Data's per-minute limit was hit. Prices will resume shortly.", true); }
     tick();
@@ -604,6 +638,152 @@ function fail(e) {
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden && st.key && !st.demo) loadQuote().then(() => { renderQuote(); draw(); }).catch(() => {}); });
 
+/* ---------- news ---------- */
+const FINN = "https://finnhub.io/api/v1";
+const RELEVANT = /google|alphabet|googl|youtube|waymo|gemini|deepmind|android|pixel|chrome|pichai|ashkenazi/i;
+const TOPICS = [
+  ["AI", /\b(ai|a\.i\.|gemini|deepmind|bard|llm|chatbot|openai|chatgpt|anthropic|artificial intelligence|tpu|veo|imagen)\b/i],
+  ["Cloud", /\bcloud\b|gcp|data ?cent/i],
+  ["Earnings", /earnings|quarterly|\bq[1-4]\b|revenue|guidance|\beps\b|profit|capex|capital expenditure|buyback|dividend/i],
+  ["Legal", /antitrust|\bdoj\b|justice department|lawsuit|\bsued?\b|court|judge|ruling|regulat|\bfined?\b|\bftc\b|european commission|\beu\b|\btrial\b|remed|monopol|settle/i],
+  ["Analysts", /price target|upgrade|downgrade|analyst|\brating\b|outperform|overweight|underweight/i],
+  ["YouTube", /youtube/i],
+  ["Search & ads", /\bsearch\b|advertis|\bads?\b|chrome|browser|safari/i],
+  ["Waymo & bets", /waymo|robotaxi|self-driving|autonomous|verily|calico|\bwing\b|quantum|willow|other bets/i],
+  ["Devices", /pixel|android|fitbit|\bnest\b|smartphone|wearable/i],
+];
+const nst = { fkey: store.get("gw_fkey") || "", items: [], hidden: 0, days: [], loading: false, err: "", q: "", topic: "All", sort: "new", show: 15, open: new Set(), mkt: null };
+
+const nyFmt = new Intl.DateTimeFormat("en-CA", {timeZone:"America/New_York", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", hourCycle:"h23"});
+function nyParts(sec) { const o = {}; nyFmt.formatToParts(new Date(sec*1000)).forEach(p => o[p.type] = p.value); return {ds:`${o.year}-${o.month}-${o.day}`, h:+o.hour}; }
+const ymd = d => d.toISOString().slice(0,10);
+
+async function finn(path, params) {
+  const u = new URL(FINN + path); Object.entries({...params, token: nst.fkey}).forEach(([k,v]) => u.searchParams.set(k, v));
+  const r = await fetch(u);
+  if (r.status === 401 || r.status === 403) { const e = new Error("Finnhub did not accept that key. Check it in Data source and save it again."); e.code = 401; throw e; }
+  if (r.status === 429) { const e = new Error("Finnhub's per-minute limit was reached. Wait a minute and tap Reload news."); e.code = 429; throw e; }
+  const j = await r.json().catch(() => null);
+  if (!Array.isArray(j)) throw new Error((j && j.error) || "Unreadable reply from Finnhub.");
+  return j;
+}
+async function loadNews() {
+  if (!nst.fkey || st.demo || nst.loading) return renderNews();
+  nst.loading = true; nst.err = ""; renderNews();
+  try {
+    // one request per month keeps each reply under Finnhub's per-call cap; 13 calls is well inside the free 60/minute
+    const end = new Date(), chunks = [];
+    for (let k = 0; k < 13; k++) { const to = new Date(end); to.setDate(to.getDate() - 28*k); const from = new Date(to); from.setDate(from.getDate() - 27); chunks.push([ymd(from), ymd(to)]); }
+    const seen = new Set(), all = []; let done = 0, hidden = 0;
+    await Promise.all([0,1,2].map(async w => {
+      for (let k = w; k < chunks.length; k += 3) {
+        const got = await finn("/company-news", {symbol: SYM, from: chunks[k][0], to: chunks[k][1]});
+        got.forEach(n => {
+          if (!n.headline || !n.datetime) return;
+          const key = n.headline.trim().toLowerCase(); if (seen.has(key)) return; seen.add(key);
+          if (!RELEVANT.test(n.headline + " " + (n.summary || ""))) { hidden++; return; }
+          all.push({t:n.datetime, h:n.headline.trim(), s:(n.summary || "").slice(0, 280), src:n.source || "", url:n.url || "",
+            topics: TOPICS.filter(([, re]) => re.test(n.headline + " " + (n.summary || ""))).map(([name]) => name)});
+        });
+        $("newsMeta").textContent = `Loading news… ${++done} of ${chunks.length}`;
+      }
+    }));
+    nst.items = all.sort((a,b) => b.t - a.t); nst.hidden = hidden;
+    if (!nst.mkt) { try { nst.mkt = parseSeries(await td("/time_series", {symbol:"QQQ", interval:"1day", outputsize:400})); } catch (e) { nst.mkt = []; } }
+  } catch (e) { nst.err = e instanceof TypeError ? "Couldn't reach Finnhub. Check your connection and tap Reload news." : e.message; }
+  nst.loading = false; buildReactions(); renderNews();
+}
+
+/* Match each story to the trading session it could first move: same day if published before the 4pm ET close, otherwise the next session. */
+function buildReactions() {
+  const d = st.daily; if (!d.length || !d[0].ds) { nst.days = []; return; }
+  const dsList = d.map(p => p.ds), qm = new Map((nst.mkt || []).map(p => [p.ds, p.c]));
+  const ret = d.map((p,i) => i ? p.c/d[i-1].c - 1 : null);
+  const mret = d.map((p,i) => i && qm.has(p.ds) && qm.has(d[i-1].ds) ? qm.get(p.ds)/qm.get(d[i-1].ds) - 1 : null);
+  const ex = ret.map((r,i) => r == null ? null : mret[i] == null ? r : r - mret[i]);
+  const firstAtOrAfter = (ds, strictlyAfter) => { let lo = 0, hi = dsList.length; while (lo < hi) { const m = (lo+hi) >> 1; (strictlyAfter ? dsList[m] <= ds : dsList[m] < ds) ? lo = m+1 : hi = m; } return lo; };
+  const byDay = new Map(); const pending = [];
+  nst.items.forEach(n => {
+    const {ds, h} = nyParts(n.t), i = firstAtOrAfter(ds, h >= 16);
+    if (i >= d.length || i < 1) { pending.push(n); return; }
+    if (!byDay.has(i)) byDay.set(i, []); byDay.get(i).push(n);
+  });
+  const days = [...byDay.entries()].map(([i, items]) => {
+    const win = ex.slice(Math.max(1, i-60), i).filter(v => v != null), typ = win.length > 10 ? sd(win) : sd(ex.filter(v => v != null));
+    const z = ex[i] / typ;
+    return {i, t:d[i].t, ret:ret[i], mret:mret[i], ex:ex[i], z, typ, after:i+5 < d.length ? d[i+5].c/d[i].c - 1 : null, items, live: i === d.length-1 && st.quote && st.quote.open};
+  });
+  // baseline: how much GOOGL moves vs the market on days with no matched story
+  const newsIdx = new Set(byDay.keys()), cut = days.length ? Math.min(...days.map(x => x.i)) : d.length;
+  const quiet = ex.filter((v,i) => v != null && i >= cut && !newsIdx.has(i)).map(Math.abs);
+  nst.quiet = quiet.length ? mean(quiet) : null; nst.pending = pending; nst.days = days; nst.hasMkt = qm.size > 0;
+}
+function level(z) { const a = Math.abs(z); return a >= 2 ? ["Big move", z > 0 ? "bull" : "bear"] : a >= 1 ? ["Notable", z > 0 ? "bull" : "bear"] : ["Normal day", "flat"]; }
+function esc(x) { return String(x).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function safeUrl(u) { return /^https?:\/\//i.test(u) ? u : "#"; }
+
+function renderNews() {
+  const body = $("newsBody"), meta = $("newsMeta");
+  if (st.demo) { meta.textContent = ""; body.innerHTML = `<p class="empty">News needs real prices. Add your Twelve Data key first, then a free Finnhub key, both in Data source.</p>`; return; }
+  if (!nst.fkey) { meta.textContent = ""; body.innerHTML = `<p class="empty">See every Alphabet headline from the past year next to how the stock moved that day. This needs a free news key from Finnhub.</p><button class="btn wide" id="addF">Add a Finnhub key</button>`;
+    $("addF").onclick = () => { $("settings").open = true; $("fkey").focus(); }; return; }
+  if (nst.loading) { if (!/Loading/.test(meta.textContent)) meta.textContent = "Loading news…"; if (!nst.items.length) body.innerHTML = `<p class="empty">Fetching a year of headlines…</p>`; return; }
+  if (nst.err) { meta.textContent = ""; body.innerHTML = `<div class="banner err" style="margin-top:12px">${esc(nst.err)}</div><button class="btn ghost wide" id="reN">Reload news</button>`; $("reN").onclick = loadNews; return; }
+  meta.textContent = `${nst.items.length.toLocaleString()} headlines · ${nst.days.length} trading days`;
+
+  const q = nst.q.trim().toLowerCase();
+  const match = n => (nst.topic === "All" || n.topics.includes(nst.topic)) && (!q || (n.h + " " + n.s).toLowerCase().includes(q));
+  let days = nst.days.map(x => ({...x, shown: x.items.filter(match)})).filter(x => x.shown.length);
+  const by = {new:(a,b) => b.i - a.i, big:(a,b) => Math.abs(b.z) - Math.abs(a.z), drop:(a,b) => a.ex - b.ex, gain:(a,b) => b.ex - a.ex}[nst.sort];
+  days.sort(by);
+
+  // topic summary
+  const P = v => Math.round(v*100) + "%";
+  const topicRows = ["All", ...TOPICS.map(t => t[0])].map(name => {
+    const ds = nst.days.filter(x => x.items.some(n => (name === "All" || n.topics.includes(name)) && (!q || (n.h + " " + n.s).toLowerCase().includes(q))) && x.after !== undefined && !x.live);
+    if (!ds.length) return "";
+    const avg = mean(ds.map(x => x.ex)), absm = mean(ds.map(x => Math.abs(x.ex))), big = ds.filter(x => Math.abs(x.z) >= 2).length;
+    return `<tr><th scope="row">${name === "All" ? "All news days" : name}</th><td class="num">${ds.length}</td><td class="num ${avg >= 0 ? "up" : "down"}">${pct(avg)}</td><td class="num">${pct(absm, false)}</td><td class="num">${big}</td></tr>`;
+  }).join("");
+  const vs = nst.hasMkt ? "vs the Nasdaq-100" : "";
+
+  const dayHtml = days.slice(0, nst.show).map(x => {
+    const [lab, cls] = level(x.z), open = nst.open.has(x.i), list = open ? x.shown : x.shown.slice(0, 3);
+    const when = dfmt(x.t, {weekday:"short", month:"short", day:"numeric", year:"numeric"});
+    const sub = [x.mret != null ? `Nasdaq-100 ${pct(x.mret)}, so GOOGL ${x.ex >= 0 ? "beat" : "lagged"} it by ${(Math.abs(x.ex)*100).toFixed(1)} pts` : "",
+      `${(Math.abs(x.z)).toFixed(1)}× a typical day`, x.live ? "today so far" : x.after != null ? `next 5 days ${pct(x.after)}` : ""].filter(Boolean).join(" · ");
+    return `<li class="nd"><div class="nd-h"><span class="date">${when}</span><span class="mv num ${x.ret >= 0 ? "up" : "down"}">${pct(x.ret)}</span><span class="chip ${cls}">${lab.toUpperCase()}</span></div>
+      <div class="nd-s">${sub}</div>
+      <ul class="hl">${list.map(n => `<li><a href="${esc(safeUrl(n.url))}" target="_blank" rel="noopener">${esc(n.h)}</a><span>${esc(n.src)}${n.topics.length ? " · " + n.topics.join(", ") : ""} · ${new Date(n.t*1000).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})}</span></li>`).join("")}</ul>
+      ${x.shown.length > 3 ? `<button class="more" data-day="${x.i}">${open ? "Show fewer" : `+${x.shown.length - 3} more headlines`}</button>` : ""}</li>`;
+  }).join("");
+
+  const keepFocus = document.activeElement && document.activeElement.id === "newsQ", caret = keepFocus ? document.activeElement.selectionStart : 0;
+  body.innerHTML = `
+    <div class="nctl">
+      <div class="nrow"><input id="newsQ" type="search" placeholder="Search: Gemini, antitrust…" value="${esc(nst.q)}" aria-label="Search headlines">
+        <select id="newsSort" aria-label="Sort"><option value="new">Newest</option><option value="big">Biggest move</option><option value="drop">Biggest drops</option><option value="gain">Biggest gains</option></select></div>
+      <div class="chips" role="group" aria-label="Topic">${["All", ...TOPICS.map(t => t[0])].map(t => `<button data-topic="${t}" aria-pressed="${nst.topic === t}">${t}</button>`).join("")}</div>
+    </div>
+    <h3 class="sub">Average reaction by topic</h3>
+    <div class="tw"><table class="acc"><thead><tr><th></th><th>Days</th><th>Avg ${vs ? "vs market" : "move"}</th><th>Typical size</th><th>Big moves</th></tr></thead><tbody>${topicRows ||
+      `<tr><td colspan="5" style="text-align:left">No matching headlines.</td></tr>`}</tbody></table></div>
+    <p class="note">${vs ? `Moves are GOOGL's change minus the Nasdaq-100's that day, so market-wide swings are taken out.` : `Market comparison unavailable, so these are GOOGL's raw daily moves.`} ${nst.quiet != null ? `On days with no Alphabet headline the typical size was ${pct(nst.quiet, false)}.` : ""} A "big move" is at least twice GOOGL's typical daily move of the previous 60 days. Stories often cluster on one day, so a move cannot be pinned on a single headline.</p>
+    <h3 class="sub">${days.length} day${days.length === 1 ? "" : "s"} with matching news</h3>
+    ${days.length ? `<ul class="ndays">${dayHtml}</ul>` : `<p class="empty">Nothing matches. Try another word or topic.</p>`}
+    ${days.length > nst.show ? `<button class="btn ghost wide" id="moreDays">Show more days</button>` : ""}
+    ${nst.pending && nst.pending.length ? `<p class="note">${nst.pending.length} newer headline${nst.pending.length === 1 ? " has" : "s have"} no closing price yet, so the reaction will show after the next close.</p>` : ""}
+    <p class="note">${nst.hidden.toLocaleString()} general market stories that don't mention Alphabet were left out.</p>`;
+  $("newsSort").value = nst.sort;
+  const qi = $("newsQ");
+  qi.oninput = () => { nst.q = qi.value; nst.show = 15; renderNews(); };
+  if (keepFocus) { qi.focus(); qi.setSelectionRange(caret, caret); }
+  $("newsSort").onchange = e => { nst.sort = e.target.value; nst.show = 15; renderNews(); };
+  body.querySelectorAll("[data-topic]").forEach(b => b.onclick = () => { nst.topic = b.dataset.topic; nst.show = 15; renderNews(); });
+  body.querySelectorAll("[data-day]").forEach(b => b.onclick = () => { const i = +b.dataset.day; nst.open.has(i) ? nst.open.delete(i) : nst.open.add(i); renderNews(); });
+  const md = $("moreDays"); if (md) md.onclick = () => { nst.show += 15; renderNews(); };
+}
+
 /* ---------- controls ---------- */
 function setRange(r) { st.range = r; store.set("gw_range", r); document.querySelectorAll("#ranges button").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === r)); document.querySelector(".chart-foot").hidden = r === "1D"; hover = null; draw(); rangeReadout(); }
 document.querySelectorAll("#ranges button").forEach(b => b.onclick = () => setRange(b.dataset.r));
@@ -611,6 +791,8 @@ $("showFc").onchange = () => { store.set("gw_fc", $("showFc").checked ? "1" : "0
 $("saveKey").onclick = () => { st.key = $("key").value.trim(); store.set("gw_key", st.key || null); st.n = 0; start(); if (st.key) $("settings").open = false; };
 $("useDemo").onclick = () => { st.key = ""; $("key").value = ""; store.set("gw_key", null); start(); };
 $("refresh").onclick = () => start();
+$("saveF").onclick = () => { nst.fkey = $("fkey").value.trim(); store.set("gw_fkey", nst.fkey || null); nst.items = []; $("settings").open = false; loadNews(); $("news").scrollIntoView({behavior:"smooth"}); };
+$("fkey").value = nst.fkey;
 $("key").value = st.key;
 if (store.get("gw_fc") === "0") $("showFc").checked = false;
 setRange(st.range);
