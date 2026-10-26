@@ -42,11 +42,11 @@ F["tod"] = px.index.hour * 60 + px.index.minute
 F["range1"] = (px["h"] - px["l"]) / px["c"]
 lv = np.log(px["v"].replace(0, np.nan))
 F["volz"] = lv - lv.groupby(F["tod"]).transform(lambda s: s.expanding().median().shift(1))
-F["absr_avg12"] = r_intra.abs().rolling(12).mean()
+F["absr_avg12"] = r_intra.abs().rolling(12, min_periods=6).mean()  # hourly days have only 7 bars
 F = F.replace([np.inf, -np.inf], np.nan)
 
 y = r.shift(-1)                                              # next bar's return
-last_bar = newday.shift(-1).fillna(True)                     # next bar is in a new session: overnight, skip
+last_bar = newday.shift(-1, fill_value=True).astype(bool)                    # next bar is in a new session: overnight, skip
 y = y.where(~last_bar)
 Y = (y > 0).astype(float).where(y.notna() & (y != 0))
 

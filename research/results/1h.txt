@@ -1,0 +1,30 @@
+1h bars: 5,077 from 2023-11-28 to 2026-10-26 (730 sessions). Development before 2025-08-28, holdout after.
+
+=== DEVELOPMENT ===
+model                                      bars   AUC      p   acc  base edge bp/trade
+Last bar continues (momentum)              2606 0.486  0.896 0.493 0.511          0.32
+Last bar reverses                          2606 0.514  0.104 0.500 0.511         -0.43
+Last hour-ish trend (12 bars)              2596 0.493  0.737 0.505 0.511         -0.03
+Nasdaq-100 last bar (lead-lag)             2606 0.484  0.919 0.484 0.511         -0.15
+GOOGL lagging the market (catch-up)        2604 0.488  0.854 0.490 0.511         -0.37
+Move since the open reverses               2607 0.506  0.304 0.502 0.511         -0.35
+Logistic regression, all features          1594 0.486  0.841 0.494 0.503         -0.24
+Gradient boosting, all features            1594 0.510  0.251 0.523 0.503          1.10
+Pattern match, last 12 bars (kNN)          2095 0.517  0.091 0.498 0.506          0.30
+Picked on development AUC: Pattern match, last 12 bars (kNN)
+
+=== HOLDOUT ===
+model                                      bars   AUC      p   acc  base edge bp/trade
+Last bar continues (momentum)              1732 0.495  0.636 0.486 0.517         -0.91
+Last bar reverses                          1732 0.505  0.364 0.514 0.517          0.91
+Last hour-ish trend (12 bars)              1732 0.498  0.566 0.493 0.517          0.25
+Nasdaq-100 last bar (lead-lag)             1732 0.494  0.659 0.503 0.517         -0.47
+GOOGL lagging the market (catch-up)        1732 0.505  0.373 0.503 0.517          0.29
+Move since the open reverses               1732 0.514  0.153 0.501 0.517         -0.64
+Logistic regression, all features          1726 0.521  0.069 0.513 0.516         -0.21
+Gradient boosting, all features            1726 0.495  0.637 0.503 0.516         -0.00
+Pattern match, last 12 bars (kNN)          1732 0.510  0.234 0.501 0.517         -1.64
+
+An edge below about 1 bp per trade is eaten by trading costs.
+Rank correlation of the last 12 bars' average move with the size of the next bar's move: 0.13
+Rank correlation of the usual move size at that time of day with the next bar's move: 0.16

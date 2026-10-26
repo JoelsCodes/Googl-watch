@@ -21,6 +21,21 @@
 
 Full tables for 5, 21 and 63 days are in `results/`.
 
+## Results, next day, next hour and next 5 minutes
+Same rules (walk-forward, choose on the earlier part, check once on the later part). Intraday bars come from Yahoo, which keeps only 60 days of 5-minute bars and about 3 years of hourly bars, so these samples are much shorter. "Edge" is the average gain per trade of going long when the model says up and short when it says down, before costs; about 1 basis point (0.01%) per trade is a realistic cost for GOOGL.
+
+| Horizon | Data | Picked on development | Its development AUC | Its holdout AUC | Holdout edge per trade |
+|---|---|---|---|---|---|
+| Next day | daily, 2004-2026 (holdout 2022-26) | Drawdown from 1-yr high | 0.53 | 0.49 | n/a; every daily timing rule earned less than holding (3-14% a year vs 18%) |
+| Next hour | 5,077 hourly bars, Nov 2023-Oct 2026 (holdout from Aug 2025) | Pattern match, last 12 bars | 0.52 | 0.51 | -1.6 bp |
+| Next 5 minutes | 4,680 bars, Aug-Oct 2026 (holdout from Sep 23) | Last bar reverses | 0.53 | 0.50 | -0.2 bp |
+
+No approach reached an edge that would survive trading costs on the holdout. The best holdout numbers (logistic regression hourly, AUC 0.52; "last bar reverses" hourly, +0.9 bp) were not the ones the development period picked, and picking after seeing the holdout would be cheating.
+
+The size of the next bar's move is again partly predictable: the usual size at that time of day (larger after the open and near the close) has a rank correlation of 0.27 with the next 5-minute move, and recent bar sizes 0.26.
+
+Full tables: `results/h1.txt` (next day), `results/1h.txt`, `results/5m.txt`.
+
 ## What it means
 1. **Direction is not predictable from these inputs.** The best development-period signal (buy after drawdowns; AUC 0.60, p = 0.02 before correcting for testing 12 ideas) fell to 0.50 on the holdout. The same happened at 5 and 63 days. Everything else hovered around 0.5 in both periods.
 2. **"Patterns" did not repeat.** Matching the shape of the last 20 or 60 days to history gave coin-flip results.
@@ -35,5 +50,6 @@ Full tables for 5, 21 and 63 days are in `results/`.
 ## Reproduce
 ```
 pip install numpy pandas scipy scikit-learn lightgbm
-python research/experiments.py PATH_TO_DATA_BRANCH_CHECKOUT 21
+python research/experiments.py PATH_TO_DATA_BRANCH_CHECKOUT 21     # or 1, 5, 63 trading days
+python research/intraday.py PATH_TO_DATA_BRANCH_CHECKOUT 5m         # or 1h
 ```
