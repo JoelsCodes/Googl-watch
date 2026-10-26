@@ -3,6 +3,11 @@
 name: Fetch price data
 on:
   workflow_dispatch:
+    inputs:
+      only_intraday:
+        description: "Skip the daily history and keep the existing daily files"
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
@@ -13,11 +18,17 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install yfinance==0.2.54 pandas
-      - name: Download
+      - name: Start from the existing data branch
         run: |
-          mkdir out && cd out
+          git clone -q --depth 1 -b data "https://github.com/${{ github.repository }}.git" out || mkdir -p out
+          rm -rf out/.git
+      - name: Download
+        env:
+          ONLY_INTRADAY: ${{ inputs.only_intraday }}
+        run: |
+          cd out
           python - <<'PY'
-          import time
+          import os, time
           import yfinance as yf
 
           def get(sym, **kw):
@@ -31,7 +42,7 @@ jobs:
               raise SystemExit(f"no data for {sym} {kw}")
 
           syms = ["GOOGL", "QQQ", "SPY", "^VIX", "^TNX", "MSFT", "AAPL", "AMZN", "META", "NVDA"]
-          for s in syms:
+          for s in ([] if os.environ.get("ONLY_INTRADAY") == "true" else syms):
               df = get(s, start="2004-08-01")
               df.index.name = "date"
               df.round(4).to_csv(s.replace("^", "") + ".csv")
