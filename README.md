@@ -5,6 +5,7 @@ A one-page phone web app for Alphabet (GOOGL): the live price, a chart of the la
 ## Use it
 1. Get a free API key at https://twelvedata.com (the free plan allows 800 requests a day).
 2. Open the app, tap **Data source**, paste the key and tap **Save and load**. The key stays in your browser on that device.
+Shortcut: open the app once as `https://joelscodes.github.io/googl-watch/#key=YOURKEY`. It saves the key on that device and removes it from the address bar. The key is never stored in this repo.
 3. On iPhone: Share → Add to Home Screen. On Android: menu → Add to Home screen.
 
 Without a key it shows clearly labeled sample data.

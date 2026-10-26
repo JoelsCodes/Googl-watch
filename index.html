@@ -193,6 +193,11 @@ const SYM = "GOOGL", API = "https://api.twelvedata.com", H = 21; // ~30 calendar
 const $ = id => document.getElementById(id);
 const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
 
+// setup link: opening the app as …/#key=YOURKEY saves the key on this device, then removes it from the address bar
+(function () {
+  const m = location.hash.match(/^#key=([A-Za-z0-9]+)$/);
+  if (m) { store.set("gw_key", m[1]); history.replaceState(null, "", location.pathname + location.search); }
+})();
 const st = { key: store.get("gw_key") || "", demo: false, daily: [], intraday: [], quote: null, range: store.get("gw_range") || "1Y", fc: null, model: null, lastPrice: null, timers: [] };
 
 /* ---------- formatting ---------- */
