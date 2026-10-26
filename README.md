@@ -11,7 +11,7 @@ Shortcut: open the app once as `https://joelscodes.github.io/googl-watch/#key=YO
 Without a key it shows clearly labeled sample data.
 
 ## How the forecast works
-Five signals vote up or down: price vs the 50-day average, the 50-day vs the 200-day average, MACD momentum, RSI(14), and the slope of the last 60 closes. The projection blends the one-year average daily return with the recent trend and a small tilt from the vote, and its range comes from the last 60 days' volatility (80% band). The app also backtests the signals over the past year and shows how often they were right next to an "always up" baseline.
+Five signals vote up or down: price vs the 50-day average, the 50-day vs the 200-day average, MACD momentum, RSI(14), and the slope of the last 60 closes. The projection is anchored on the average daily return of up to the last three years, with a small tilt from the vote (at most about ±2% over 21 days). An earlier version also followed the recent 60-day trend; on real GOOGL data that made it call declines that mostly did not come, so it was dropped, and its range comes from the last 60 days' volatility (80% band). The app also backtests the signals over the past year and shows how often they were right next to an "always up" baseline.
 
 ## Accuracy check
 The app replays its own forecast on every past trading day in the last ~5 years of data (one Twelve Data request), using only prices known on that day, and scores it against what happened 21 trading days later: direction vs always guessing "up", target error vs assuming no change, how often the price landed in the 80% range, and the average move after Bullish, Neutral and Bearish calls.

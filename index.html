@@ -353,10 +353,11 @@ function indicators(c) {
 function forecastAt(ind, lr, j) {
   const sigs = signalsAt(ind, j), score = sigs.reduce((s,x) => s+x.v, 0);
   const vol = sd(lr.slice(j-60, j));                  // daily volatility, recent regime
-  const longDrift = mean(lr.slice(Math.max(0, j-252), j)); // a year of average daily log return
-  const trend = slope(ind.lc.slice(j-59, j+1));       // recent trend, per day
-  // blend: long-run drift, shrunk recent trend, and a small tilt from the signal score
-  const mu = 0.5*longDrift + 0.25*trend + score*0.00025;
+  const longDrift = mean(lr.slice(Math.max(0, j-756), j)); // up to 3 years of average daily log return
+  // The accuracy check on real GOOGL data (Sep 2022 to Sep 2026) showed the recent-trend term made the forecast call
+  // declines that mostly did not come: "Bearish" days still rose 58% of the time. So the long-run drift now anchors
+  // the forecast and the signals only tilt it (at most about +/-2% over 21 days).
+  const mu = longDrift + score*0.0002;
   return {sigs, score, vol, mu, pUp: Phi(mu*H / (vol*Math.sqrt(H)))};
 }
 const verdictOf = score => score >= 2 ? "bull" : score <= -2 ? "bear" : "flat";
@@ -547,7 +548,8 @@ function renderModel() {
   $("pRange").style.fontSize = "14px";
   $("pUp").textContent = Math.round(m.pUp*100) + "%";
   $("signals").innerHTML = m.sigs.map(s => `<li><span class="n">${s.n}</span><span class="chip ${s.v > 0 ? "bull" : s.v < 0 ? "bear" : "flat"}">${s.v > 0 ? "UP" : s.v < 0 ? "DOWN" : "NEUTRAL"}</span><span class="d">${s.d}</span></li>`).join("");
-  $("backtest").textContent = `The "likely range" is where the model expects the price 8 times out of 10. See the accuracy check below for how these forecasts did on past dates.`;
+  const past = m.acc && m.acc[cls];
+  $("backtest").textContent = (past ? `When the app said ${b.textContent} before, GOOGL rose over the next 21 trading days ${Math.round(past.up*100)}% of the time, by ${pct(past.avg)} on average (${past.n} days). ` : "") + `The "likely range" is where the model expects the price 8 times out of 10. See the accuracy check below for how these forecasts did on past dates.`;
   renderAccuracy(m.acc);
 }
 function renderAccuracy(a) {
@@ -683,7 +685,7 @@ async function loadNews() {
           const key = n.headline.trim().toLowerCase(); if (seen.has(key)) return; seen.add(key);
           if (!RELEVANT.test(n.headline + " " + (n.summary || ""))) { hidden++; return; }
           all.push({t:n.datetime, h:n.headline.trim(), s:(n.summary || "").slice(0, 280), src:n.source || "", url:n.url || "",
-            topics: TOPICS.filter(([, re]) => re.test(n.headline + " " + (n.summary || ""))).map(([name]) => name)});
+            topics: TOPICS.filter(([, re]) => re.test(n.headline)).map(([name]) => name)}); // headline only: summaries mention AI in almost every story
         });
         $("newsMeta").textContent = `Loading news… ${++done} of ${chunks.length}`;
       }
@@ -729,7 +731,8 @@ function renderNews() {
     $("addF").onclick = () => { $("settings").open = true; $("fkey").focus(); }; return; }
   if (nst.loading) { if (!/Loading/.test(meta.textContent)) meta.textContent = "Loading news…"; if (!nst.items.length) body.innerHTML = `<p class="empty">Fetching a year of headlines…</p>`; return; }
   if (nst.err) { meta.textContent = ""; body.innerHTML = `<div class="banner err" style="margin-top:12px">${esc(nst.err)}</div><button class="btn ghost wide" id="reN">Reload news</button>`; $("reN").onclick = loadNews; return; }
-  meta.textContent = `${nst.items.length.toLocaleString()} headlines · ${nst.days.length} trading days`;
+  const oldest = nst.items.length ? new Date(nst.items[nst.items.length-1].t*1000) : null;
+  meta.textContent = `${nst.items.length.toLocaleString()} headlines · ${nst.days.length} trading days${oldest ? ` · since ${dfmt(oldest, {month:"short", day:"numeric"})}` : ""}`;
 
   const q = nst.q.trim().toLowerCase();
   const match = n => (nst.topic === "All" || n.topics.includes(nst.topic)) && (!q || (n.h + " " + n.s).toLowerCase().includes(q));
@@ -773,6 +776,7 @@ function renderNews() {
     ${days.length ? `<ul class="ndays">${dayHtml}</ul>` : `<p class="empty">Nothing matches. Try another word or topic.</p>`}
     ${days.length > nst.show ? `<button class="btn ghost wide" id="moreDays">Show more days</button>` : ""}
     ${nst.pending && nst.pending.length ? `<p class="note">${nst.pending.length} newer headline${nst.pending.length === 1 ? " has" : "s have"} no closing price yet, so the reaction will show after the next close.</p>` : ""}
+    ${oldest && (Date.now() - oldest) / 864e5 < 300 ? `<p class="note">Finnhub only sent news back to ${dfmt(oldest)}, so older stories are missing.</p>` : ""}
     <p class="note">${nst.hidden.toLocaleString()} general market stories that don't mention Alphabet were left out.</p>`;
   $("newsSort").value = nst.sort;
   const qi = $("newsQ");
