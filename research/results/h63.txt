@@ -1,0 +1,38 @@
+Horizon 63 trading days. Data 2004-08-19 to 2026-10-26.
+
+=== DEVELOPMENT 2012-2021 (model selection happens here) ===
+model                                      AUC      p   acc  base upIfBull upIfBear ret|bull ret|bear   CAGR    B&H inMkt
+App's 5 signals (score)                  0.370  0.993 0.386 0.696    0.605    0.755    3.08%    6.96%  -0.9%  23.5% 0.35
+12-month momentum (r252)                 0.336  0.972 0.458 0.696    0.628    0.800    4.11%    7.46%  10.5%  23.5% 0.65
+1-month reversal (-r21)                  0.606  0.014 0.547 0.696    0.760    0.640    7.36%    3.77%  21.0%  23.5% 0.53
+Fear gauge: VIX level                    0.609  0.416 0.528 0.696    0.756    0.650    6.95%    4.27%  11.8%  23.5% 0.47
+Fear gauge: VIX vs 1y avg                0.518  0.506 0.506 0.696    0.698    0.694    5.87%    5.00%  12.4%  23.5% 0.50
+Drawdown from 1y high (deeper=buy)       0.683  0.004 0.567 0.696    0.813    0.611    8.05%    3.56%  16.6%  23.5% 0.40
+Logistic, price features                 0.574  0.043 0.526 0.696    0.766    0.646    6.75%    4.51%  19.5%  23.5% 0.53
+Logistic, + market context               0.481  0.235 0.467 0.696    0.686    0.704    4.76%    5.98%  10.9%  23.5% 0.45
+Gradient boosting, price features        0.483  0.072 0.448 0.696    0.674    0.712    4.70%    5.97%  10.3%  23.5% 0.47
+Gradient boosting, + market context      0.508  0.178 0.476 0.696    0.699    0.694    5.32%    5.54%  11.4%  23.5% 0.42
+Pattern match, 20-day shapes (kNN)       0.542  0.701 0.480 0.696    0.709    0.687    5.66%    5.29%  14.9%  23.5% 0.50
+Pattern match, 60-day shapes (kNN)       0.619  0.025 0.545 0.696    0.794    0.628    7.17%    4.24%  17.5%  23.5% 0.50
+
+Picked on development AUC: Drawdown from 1y high (deeper=buy)
+
+=== HOLDOUT 2022-now (all models shown; only the picked one counts) ===
+model                                      AUC      p   acc  base upIfBull upIfBear ret|bull ret|bear   CAGR    B&H inMkt
+App's 5 signals (score)                  0.547  0.284 0.455 0.611    0.619    0.608    5.13%    5.19%   0.2%  20.8% 0.26
+12-month momentum (r252)                 0.454  0.864 0.465 0.611    0.569    0.663    3.82%    6.83%   7.7%  20.8% 0.53
+1-month reversal (-r21)                  0.482  0.358 0.472 0.611    0.582    0.641    4.41%    5.96%  16.2%  20.8% 0.58
+Fear gauge: VIX level                    0.433  0.452 0.404 0.611    0.518    0.680    3.01%    6.78%   3.1%  20.8% 0.32
+Fear gauge: VIX vs 1y avg                0.394  0.642 0.449 0.611    0.551    0.698    2.89%    8.45%  -1.3%  20.8% 0.47
+Drawdown from 1y high (deeper=buy)       0.517  0.176 0.512 0.611    0.606    0.619    5.59%    4.59%  14.5%  20.8% 0.58
+Logistic, price features                 0.467  0.272 0.487 0.611    0.599    0.624    4.26%    6.08%   5.2%  20.8% 0.47
+Logistic, + market context               0.442  0.452 0.480 0.611    0.586    0.639    4.02%    6.47%   5.5%  20.8% 0.42
+Gradient boosting, price features        0.410  0.611 0.451 0.611    0.557    0.678    4.13%    6.43%  11.0%  20.8% 0.63
+Gradient boosting, + market context      0.388  0.671 0.459 0.611    0.566    0.665    3.81%    6.76%   7.1%  20.8% 0.58
+Pattern match, 20-day shapes (kNN)       0.427  0.467 0.433 0.611    0.546    0.674    3.48%    6.78%  16.3%  20.8% 0.37
+Pattern match, 60-day shapes (kNN)       0.506  0.160 0.472 0.611    0.579    0.648    4.23%    6.24%  12.0%  20.8% 0.68
+
+Volatility check: correlation of 21-day realised vol with the size of the next 63-day move: 0.15 (VIX: 0.19)
+Correlation of past 21-day vol with realised vol over the next 63 days: 0.38
+Correlation of past 63-day vol with realised vol over the next 63 days: 0.41
+Correlation of VIX with realised vol over the next 63 days: 0.43
