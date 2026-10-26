@@ -120,6 +120,14 @@ details.card[open] summary::after{content:"–"}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--fg)}
 .form p{margin:0;font-size:13px;color:var(--muted)}
 .form a{color:var(--accent)}
+.tw{overflow-x:auto;margin-top:10px}
+table.acc{width:100%;border-collapse:collapse;font-size:13.5px}
+table.acc th,table.acc td{padding:8px 6px;border-top:1px solid var(--line);text-align:right;vertical-align:top}
+table.acc th:first-child{text-align:left;font-weight:600}
+table.acc thead th{border-top:0;font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+table.acc td{font-variant-numeric:tabular-nums;white-space:nowrap}
+table.acc .x{display:block;font:11.5px var(--f-body);color:var(--muted)}
+h3.sub{font:600 13px var(--f-body);margin:16px 0 0;color:var(--fg)}
 footer{font-size:12px;color:var(--muted);line-height:1.5}
 </style>
 </head>
@@ -173,6 +181,11 @@ footer{font-size:12px;color:var(--muted);line-height:1.5}
     </section>
   </div>
 
+  <section class="card" aria-label="Accuracy check">
+    <h2>Accuracy check · past forecasts</h2>
+    <div id="acc"></div>
+  </section>
+
   <details class="card" id="settings">
     <summary>Data source</summary>
     <div class="form">
@@ -221,8 +234,8 @@ async function td(path, params) {
 const parseSeries = j => (j.values || []).map(v => ({t: new Date(v.datetime.replace(" ", "T")), o:+v.open, h:+v.high, l:+v.low, c:+v.close, v:+v.volume})).reverse();
 
 async function loadDaily() {
-  // 500 trading days: 365 calendar days to show, plus history so the 200-day average and backtest are valid on day one
-  st.daily = parseSeries(await td("/time_series", {interval:"1day", outputsize:500}));
+  // ~5 years: 365 calendar days to show, the rest feeds the 200-day average and the accuracy check (still 1 request)
+  st.daily = parseSeries(await td("/time_series", {interval:"1day", outputsize:1300}));
 }
 async function loadIntraday() {
   const all = parseSeries(await td("/time_series", {interval:"5min", outputsize:160}));
@@ -248,8 +261,8 @@ function makeDemo() {
   let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const gauss = () => Math.sqrt(-2*Math.log(rnd()+1e-12)) * Math.cos(2*Math.PI*rnd());
   const out = []; let p = 150; const d = new Date(); d.setHours(16,0,0,0);
-  const days = []; for (let i = 0; days.length < 500; i++) { const x = new Date(d); x.setDate(d.getDate()-i); if (x.getDay()%6) days.push(x); }
-  days.reverse().forEach((t, i) => { p *= Math.exp(0.0009 + 0.018*gauss() + (i>380 ? 0.0012 : 0)); out.push({t, o:p, h:p*1.01, l:p*0.99, c:p, v:2.5e7}); });
+  const days = []; for (let i = 0; days.length < 1300; i++) { const x = new Date(d); x.setDate(d.getDate()-i); if (x.getDay()%6) days.push(x); }
+  days.reverse().forEach((t, i) => { p *= Math.exp(0.0009 + 0.018*gauss() + (i>1180 ? 0.0012 : 0)); out.push({t, o:p, h:p*1.01, l:p*0.99, c:p, v:2.5e7}); });
   st.daily = out;
   const last = out[out.length-1].c, intr = []; let q = out[out.length-2].c;
   const open = new Date(d); open.setHours(9,30,0,0);
@@ -303,16 +316,23 @@ function indicators(c) {
   return {c, s50: sma(c,50), s200: sma(c,200), macdH: macd.map((m,i) => m - sig[i]), r14: rsi(c), lc: c.map(Math.log)};
 }
 
+/* The forecast as it would have been made on day j, using only prices up to j. */
+function forecastAt(ind, lr, j) {
+  const sigs = signalsAt(ind, j), score = sigs.reduce((s,x) => s+x.v, 0);
+  const vol = sd(lr.slice(j-60, j));                  // daily volatility, recent regime
+  const longDrift = mean(lr.slice(Math.max(0, j-252), j)); // a year of average daily log return
+  const trend = slope(ind.lc.slice(j-59, j+1));       // recent trend, per day
+  // blend: long-run drift, shrunk recent trend, and a small tilt from the signal score
+  const mu = 0.5*longDrift + 0.25*trend + score*0.00025;
+  return {sigs, score, vol, mu, pUp: Phi(mu*H / (vol*Math.sqrt(H)))};
+}
+const verdictOf = score => score >= 2 ? "bull" : score <= -2 ? "bear" : "flat";
+
 function buildModel() {
   const d = st.daily; if (d.length < 80) return null;
   const c = d.map(p => p.c), ind = indicators(c), n = c.length, i = n-1;
-  const sigs = signalsAt(ind, i), score = sigs.reduce((s,x) => s+x.v, 0);
   const lr = c.slice(1).map((x,k) => Math.log(x/c[k]));
-  const vol = sd(lr.slice(-60));                      // daily volatility, recent regime
-  const longDrift = mean(lr.slice(-252));             // a year of average daily log return
-  const trend = slope(ind.lc.slice(-60));             // recent trend, per day
-  // blend: long-run drift, shrunk recent trend, and a small tilt from the signal score
-  const mu = 0.5*longDrift + 0.25*trend + score*0.00025;
+  const {sigs, score, vol, mu, pUp} = forecastAt(ind, lr, i);
   const last = c[i], t0 = d[i].t;
   const fc = {t:[t0], mid:[last], lo:[last], hi:[last]};
   let day = new Date(t0);
@@ -321,16 +341,35 @@ function buildModel() {
     const m = Math.log(last) + mu*k, s = vol*Math.sqrt(k);
     fc.t.push(day); fc.mid.push(Math.exp(m)); fc.lo.push(Math.exp(m - 1.2816*s)); fc.hi.push(Math.exp(m + 1.2816*s));
   }
-  const pUp = Phi(mu*H / (vol*Math.sqrt(H)));
-  // backtest: how often did the score's sign call the 21-day move correctly over the last year?
-  let hit = 0, tot = 0;
-  for (let j = Math.max(200, n-252-H); j < n-H; j++) {
-    const sc = signalsAt(ind, j).reduce((s,x) => s+x.v, 0); if (!sc) continue;
-    tot++; if (Math.sign(sc) === Math.sign(c[j+H]-c[j])) hit++;
-  }
-  let base = 0, bt = 0; for (let j = Math.max(200, n-252-H); j < n-H; j++) { bt++; if (c[j+H] > c[j]) base++; }
   st.fc = fc;
-  return {sigs, score, max: sigs.length, mu, vol, pUp, mid: fc.mid[H], lo: fc.lo[H], hi: fc.hi[H], hit, tot, base: bt ? base/bt : null, s50: ind.s50};
+  return {sigs, score, max: sigs.length, mu, vol, pUp, mid: fc.mid[H], lo: fc.lo[H], hi: fc.hi[H], s50: ind.s50, acc: cachedAccuracy(d, c, ind, lr)};
+}
+
+// the replay only changes when the daily history is reloaded, not on every live quote
+function cachedAccuracy(d, c, ind, lr) {
+  const key = d.length + "|" + +d[0].t + "|" + +d[d.length-1].t;
+  if (st.accKey !== key) { st.accKey = key; st.acc = accuracy(d, c, ind, lr); }
+  return st.acc;
+}
+/* Walk-forward test: replay the forecast on every past trading day that has 21 days of known outcome after it. */
+function accuracy(d, c, ind, lr) {
+  const n = c.length, from = 260, to = n-1-H; if (to - from < 60) return null;
+  const z = 1.2816, b = {bull:[], flat:[], bear:[]};
+  let N = 0, dirHit = 0, upDays = 0, err = 0, errNaive = 0, inBand = 0, saidUp = 0, saidUpHit = 0, pSum = 0;
+  for (let j = from; j <= to; j++) {
+    const f = forecastAt(ind, lr, j), act = c[j+H]/c[j] - 1;
+    const mid = Math.exp(f.mu*H), s = f.vol*Math.sqrt(H);
+    N++; if (act > 0) upDays++;
+    if (Math.sign(f.mu) === Math.sign(act)) dirHit++;
+    err += Math.abs(c[j]*mid / c[j+H] - 1); errNaive += Math.abs(c[j] / c[j+H] - 1);
+    const lr21 = Math.log(1+act); if (lr21 >= f.mu*H - z*s && lr21 <= f.mu*H + z*s) inBand++;
+    pSum += f.pUp; if (f.pUp >= 0.5) { saidUp++; if (act > 0) saidUpHit++; }
+    b[verdictOf(f.score)].push(act);
+  }
+  const grp = a => a.length ? {n:a.length, avg:mean(a), up:a.filter(x => x > 0).length/a.length} : null;
+  return {N, start:d[from].t, end:d[to].t, dir:dirHit/N, base:upDays/N, err:err/N, errNaive:errNaive/N,
+    cover:inBand/N, pAvg:pSum/N, saidUp, saidUpHit:saidUp ? saidUpHit/saidUp : null,
+    bull:grp(b.bull), flat:grp(b.flat), bear:grp(b.bear), indep:Math.floor(N/H)};
 }
 
 function yearStats() {
@@ -475,9 +514,35 @@ function renderModel() {
   $("pRange").style.fontSize = "14px";
   $("pUp").textContent = Math.round(m.pUp*100) + "%";
   $("signals").innerHTML = m.sigs.map(s => `<li><span class="n">${s.n}</span><span class="chip ${s.v > 0 ? "bull" : s.v < 0 ? "bear" : "flat"}">${s.v > 0 ? "UP" : s.v < 0 ? "DOWN" : "NEUTRAL"}</span><span class="d">${s.d}</span></li>`).join("");
-  $("backtest").textContent = m.tot
-    ? `Track record: over the past year these signals called the direction of the next 21 trading days correctly ${Math.round(m.hit/m.tot*100)}% of the time (${m.hit} of ${m.tot} days). Simply guessing "up" every day would have been right ${Math.round(m.base*100)}% of the time. The "likely range" is where the model expects the price 8 times out of 10.`
-    : `The "likely range" is where the model expects the price 8 times out of 10.`;
+  $("backtest").textContent = `The "likely range" is where the model expects the price 8 times out of 10. See the accuracy check below for how these forecasts did on past dates.`;
+  renderAccuracy(m.acc);
+}
+function renderAccuracy(a) {
+  const el = $("acc"); if (!a) { el.innerHTML = `<p class="note">Not enough price history yet to test past forecasts.</p>`; return; }
+  const P = v => Math.round(v*100) + "%", good = (x, y) => x > y ? "up" : "down";
+  const row = (l, app, base, cls) => `<tr><th scope="row">${l}</th><td class="num ${cls || ""}">${app}</td><td class="num">${base}</td></tr>`;
+  const g = (k, l) => { const x = a[k]; return x ? `<tr><th scope="row">${l}</th><td class="num">${x.n}</td><td class="num ${x.avg >= 0 ? "up" : "down"}">${pct(x.avg)}</td><td class="num">${P(x.up)}</td></tr>` : `<tr><th scope="row">${l}</th><td class="num">0</td><td>—</td><td>—</td></tr>`; };
+  const beatDir = a.dir > a.base, beatErr = a.err < a.errNaive, coverOk = Math.abs(a.cover - 0.8) <= 0.07;
+  el.innerHTML = `
+    <p class="note" style="margin-top:6px">The app replayed its own 30-day forecast on each of <b>${a.N.toLocaleString()}</b> past trading days, from ${dfmt(a.start)} to ${dfmt(a.end)}, using only the prices known on that day, then checked what GOOGL actually did 21 trading days later.</p>
+    <div class="tw"><table class="acc">
+      <thead><tr><th></th><th>App</th><th>Simple rule</th></tr></thead>
+      <tbody>
+        ${row("Direction right", P(a.dir), `${P(a.base)} <span class="x">always “up”</span>`, good(a.dir, a.base))}
+        ${row("Typical target miss", pct(a.err, false), `${pct(a.errNaive, false)} <span class="x">“no change”</span>`, good(a.errNaive, a.err))}
+        ${row("Inside likely range", P(a.cover), `80% <span class="x">target</span>`, coverOk ? "up" : "down")}
+        ${row("Said “higher” ≥50%, was right", a.saidUpHit == null ? "—" : P(a.saidUpHit), `${P(a.base)} <span class="x">base rate</span>`, a.saidUpHit != null && a.saidUpHit > a.base ? "up" : "down")}
+      </tbody></table></div>
+    <h3 class="sub">What happened after each call</h3>
+    <div class="tw"><table class="acc">
+      <thead><tr><th></th><th>Days</th><th>Avg next 21 days</th><th>Went up</th></tr></thead>
+      <tbody>${g("bull", "Bullish")}${g("flat", "Neutral")}${g("bear", "Bearish")}</tbody></table></div>
+    <p class="note"><b>Verdict:</b> ${[
+      beatDir ? `Called direction better than always guessing “up” (${P(a.dir)} vs ${P(a.base)}).` : `Did not beat simply guessing “up” on direction (${P(a.dir)} vs ${P(a.base)}).`,
+      beatErr ? `Its price targets were closer than assuming no change.` : `Its price targets were no closer than assuming the price stays put.`,
+      coverOk ? `The likely range was about the right width.` : a.cover < 0.8 ? `The likely range was too narrow (held the real price ${P(a.cover)} of the time, not 80%).` : `The likely range was wider than needed (held the real price ${P(a.cover)} of the time).`
+    ].join(" ")}</p>
+    <p class="note">Forecasts on neighbouring days overlap, so this is closer to ${a.indep} independent tests than ${a.N.toLocaleString()}. Past accuracy does not promise future accuracy.</p>`;
 }
 function renderStats() {
   const s = yearStats(); if (!s) return;
